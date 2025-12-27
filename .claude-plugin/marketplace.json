@@ -1,14 +1,16 @@
 {
   "name": "trivial",
-  "description": "Multi-model development agents for Claude Code",
+  "owner": {
+    "name": "femtomc"
+  },
+  "metadata": {
+    "description": "Multi-model development agents for Claude Code"
+  },
   "plugins": [
     {
       "name": "trivial",
       "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
-      "source": {
-        "source": "github",
-        "repo": "femtomc/trivial"
-      }
+      "source": "."
     }
   ]
 }
