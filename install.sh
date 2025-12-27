@@ -94,33 +94,23 @@ install_tissue() {
     fi
 }
 
-install_codex() {
-    if check_command codex; then
-        success "codex already installed"
-        return
-    fi
-    info "Installing codex (OpenAI CLI)..."
-    if check_command npm; then
-        npm install -g @openai/codex
-        success "codex installed"
-    else
-        warn "npm not found. Install Node.js then run:"
-        warn "  npm install -g @openai/codex"
-    fi
-}
+check_optional_deps() {
+    echo ""
+    info "Checking optional dependencies for enhanced multi-model support..."
+    echo ""
 
-install_gemini() {
-    if check_command gemini; then
-        success "gemini already installed"
-        return
-    fi
-    info "Installing gemini (Google CLI)..."
-    if check_command npm; then
-        npm install -g @google/gemini-cli
-        success "gemini installed"
+    if check_command codex; then
+        success "codex found - oracle/reviewer/planner will use OpenAI for diverse perspectives"
     else
-        warn "npm not found. Install Node.js then run:"
-        warn "  npm install -g @google/gemini-cli"
+        info "codex not found - agents will use Claude for second opinions"
+        echo "    To enable OpenAI diversity: npm install -g @openai/codex"
+    fi
+
+    if check_command gemini; then
+        success "gemini found - documenter will use Gemini for writing"
+    else
+        info "gemini not found - documenter will use Claude for writing"
+        echo "    To enable Gemini diversity: npm install -g @google/gemini-cli"
     fi
 }
 
@@ -133,18 +123,21 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
+    # Required dependencies
+    info "Installing required dependencies..."
     install_uv
     install_gh
     install_tissue
-    install_codex
-    install_gemini
+
+    # Optional dependencies (just check, don't install)
+    check_optional_deps
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    success "Dependencies installed!"
+    success "Setup complete!"
     echo ""
-    echo "Next, install the plugin in Claude Code:"
+    echo "Install the plugin in Claude Code:"
     echo ""
     echo "  ${GREEN}/plugin marketplace add femtomc/trivial${NC}"
     echo "  ${GREEN}/plugin install trivial@trivial${NC}"
@@ -153,7 +146,7 @@ main() {
     echo ""
     echo "  ${BLUE}tissue init${NC}     # Initialize issue tracker"
     echo "  ${BLUE}/grind${NC}          # Work through issues"
-    echo "  ${BLUE}/review${NC}         # Code review with Codex"
+    echo "  ${BLUE}/review${NC}         # Code review"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }

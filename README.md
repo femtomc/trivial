@@ -1,25 +1,30 @@
 # trivial
 
-This is a Claude Code plugin which you can conveniently install using the marketplace.
+A Claude Code plugin for long-running agentic workflows with multi-model collaboration.
 
-It provides long running agents with conversational support from Codex / Gemini.
+Agents consult external models (Codex, Gemini) for "second opinions" to mitigate self-bias—but these are **optional**. When unavailable, agents fall back to `claude -p` which provides fresh context and still breaks the self-refinement loop.
 
-The features are inspired by AmpCode, Anthropic's blog post on long running agentic harnesses, and several academic papers which study the "self-bias" problem.
+Inspired by AmpCode, Anthropic's research on agentic harnesses, and academic work on the self-bias problem in LLMs.
 
 ## Agents
 
-| Agent | Model | Description |
-|-------|-------|-------------|
-| `explorer` | haiku | Local codebase search and exploration |
-| `librarian` | haiku | Remote code research (GitHub, docs, APIs) |
-| `oracle` | opus | Deep reasoning with Codex dialogue |
-| `documenter` | opus | Technical writing with Gemini 3 Flash |
-| `reviewer` | opus | Code review with Codex dialogue |
-| `planner` | opus | Design and issue tracker curation with Codex |
+| Agent | Model | Second Opinion | Description |
+|-------|-------|----------------|-------------|
+| `explorer` | haiku | — | Local codebase search and exploration |
+| `librarian` | haiku | — | Remote code research (GitHub, docs, APIs) |
+| `oracle` | opus | codex or claude | Deep reasoning with external dialogue |
+| `documenter` | opus | gemini or claude | Technical writing with external writer |
+| `reviewer` | opus | codex or claude | Code review with external dialogue |
+| `planner` | opus | codex or claude | Design and issue tracker curation |
 
 ### How it works
 
-trivial delegates tasks to the right model for the job: fast models (haiku) handle search, while powerful models (opus) tackle reasoning. For critical decisions, opus agents consult external models—Codex and Gemini—to validate conclusions, mitigating the self-bias inherent in single-model workflows. This multi-model collaboration catches blind spots and ensures reliability that no single architecture can achieve alone.
+trivial delegates tasks to the right model for the job: fast models (haiku) handle search, while powerful models (opus) tackle reasoning. For critical decisions, opus agents consult a "second opinion" to validate conclusions:
+
+- **If codex/gemini installed**: Uses external model for maximum architectural diversity
+- **If not installed**: Falls back to `claude -p` which starts fresh context, still breaking self-bias
+
+Either way, you get multi-perspective validation. External models are preferred for diversity, but the plugin works out of the box with just Claude.
 
 ### Why Multi-Model?
 
@@ -54,11 +59,18 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 ## Requirements
 
+### Required
+
 - [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/work`, `/grind`, `/issue`)
-- [codex](https://github.com/openai/codex) - OpenAI coding agent (for oracle/reviewer/planner agents)
-- [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google Gemini CLI (for documenter agent)
 - [uv](https://github.com/astral-sh/uv) - Python package runner (for `scripts/search.py`)
 - [gh](https://cli.github.com/) - GitHub CLI (for librarian agent)
+
+### Optional (for enhanced multi-model diversity)
+
+- [codex](https://github.com/openai/codex) - OpenAI coding agent → used by oracle/reviewer/planner
+- [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google Gemini CLI → used by documenter
+
+When these are not installed, agents fall back to `claude -p` for second opinions.
 
 ## Installation
 
@@ -145,9 +157,9 @@ tissue new "Refactor database queries" -p 2 -t tech-debt
 "How does React Query handle cache invalidation?"
 # → librarian agent fetches docs and explains
 
-# Deep reasoning on hard problems (thorough, uses opus + Codex)
+# Deep reasoning on hard problems (thorough, uses opus + second opinion)
 "I'm stuck on this race condition, help me debug it"
-# → oracle agent analyzes with Codex, provides recommendation
+# → oracle agent analyzes with external dialogue, provides recommendation
 ```
 
 ## Troubleshooting
@@ -165,31 +177,27 @@ Required for: `/work`, `/grind`, `/issue`
 
 ### codex: command not found
 
-Install the OpenAI Codex CLI:
+**This is optional.** Agents will use `claude -p` for second opinions instead.
 
+To enable OpenAI diversity:
 ```shell
-# See https://github.com/openai/codex
 npm install -g @openai/codex
 ```
 
-Required for: `oracle`, `reviewer`, `planner` agents
-
 ### gemini: command not found
 
-Install the Google Gemini CLI:
+**This is optional.** The documenter will use `claude -p` for writing instead.
 
+To enable Gemini diversity:
 ```shell
-# See https://github.com/google-gemini/gemini-cli
 npm install -g @google/gemini-cli
 ```
 
-Required for: `documenter` agent
-
 ### Agent not responding or errors
 
-1. Verify the external tool is installed: `which tissue`, `which codex`, `which gemini`
-2. Check API credentials are configured (Codex needs `OPENAI_API_KEY`, Gemini needs Google auth)
-3. Try running the external tool directly to see its error output
+1. Check that required tools are installed: `which tissue`, `which uv`, `which gh`
+2. If using codex/gemini, verify API credentials (Codex needs `OPENAI_API_KEY`, Gemini needs Google auth)
+3. Try running the tool directly to see its error output
 
 ### No issues found
 
