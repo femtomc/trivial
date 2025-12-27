@@ -20,10 +20,14 @@ Multi-model development agents for Claude Code.
 | `/fmt` | Auto-detect and run project formatter |
 | `/test` | Auto-detect and run project tests |
 | `/review` | Run code review via reviewer agent |
+| `/loop <task>` | Iterative loop until task is complete |
+| `/grind [filter]` | Continuously work through issue tracker |
+| `/issue <id>` | Work on a specific tissue issue |
+| `/cancel-loop` | Cancel the active loop |
 
 ## Requirements
 
-- [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/work` command)
+- [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/work`, `/grind`, `/issue`)
 - [codex](https://github.com/openai/codex) - OpenAI CLI (for oracle/reviewer agents)
 - [gemini](https://github.com/google-gemini/generative-ai-cli) - Gemini CLI (for documenter agent)
 
