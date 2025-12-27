@@ -1,0 +1,8 @@
+{
+  "name": "trivial",
+  "version": "0.1.0",
+  "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
+  "author": {
+    "name": "femtomc"
+  }
+}
