@@ -29,7 +29,7 @@ If **no changes** (both empty):
 Invoke the reviewer agent:
 
 ```
-Task(subagent_type="reviewer", prompt="Review the current changes. Issue: <issue-id or 'uncommitted'>")
+Task(subagent_type="reviewer", prompt="Review the current changes. $ARGUMENTS")
 ```
 
 The reviewer agent will:

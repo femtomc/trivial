@@ -55,14 +55,24 @@ See [docs/architecture.md](docs/architecture.md) for details.
 ## Requirements
 
 - [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/work`, `/grind`, `/issue`)
-- [codex](https://github.com/openai/codex) - OpenAI coding agent (for oracle/reviewer agents)
+- [codex](https://github.com/openai/codex) - OpenAI coding agent (for oracle/reviewer/planner agents)
 - [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google Gemini CLI (for documenter agent)
+- [uv](https://github.com/astral-sh/uv) - Python package runner (for `scripts/search.py`)
+- [gh](https://cli.github.com/) - GitHub CLI (for librarian agent)
 
 ## Installation
 
-### As a marketplace
+### Quick install
+
+Install dependencies first:
 
 ```shell
+curl -fsSL https://raw.githubusercontent.com/femtomc/trivial/main/install.sh | sh
+```
+
+Then in Claude Code:
+
+```
 /plugin marketplace add femtomc/trivial
 /plugin install trivial@trivial
 ```

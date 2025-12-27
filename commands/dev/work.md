@@ -35,15 +35,15 @@ Repeat until LGTM:
 
 1. `/test` - ensure tests pass
 2. `/fmt` - format code
-3. Commit: `git add . && git commit -m "type: description"`
-4. `/review <issue-id>` - get code review
-5. If CHANGES_REQUESTED: fix and repeat from step 1
+3. `/review <issue-id>` - get code review (reviews uncommitted changes)
+4. If CHANGES_REQUESTED: fix and repeat from step 1
 
 ## Phase 4: Complete
 
-1. `tissue status <issue-id> closed`
-2. `git push`
-3. Summarize what was accomplished
+1. Commit: `git add . && git commit -m "type: description"`
+2. `tissue status <issue-id> closed`
+3. `git push`
+4. Summarize what was accomplished
 
 ## Rules
 

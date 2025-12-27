@@ -22,7 +22,7 @@ Examples:
 Invoke the documenter agent:
 
 ```
-Task(subagent_type="documenter", prompt="Document: <topic>")
+Task(subagent_type="documenter", prompt="$ARGUMENTS")
 ```
 
 The documenter agent will:
