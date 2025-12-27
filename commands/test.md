@@ -4,14 +4,15 @@ Run the test suite and summarize results.
 
 ## Steps
 
-1. Detect the project type and run the appropriate test command:
-   - If `zig.build.zon` or `build.zig` exists: `zig build test`
-   - If `Cargo.toml` exists: `cargo test`
-   - If `package.json` exists: `npm test`
-   - If `go.mod` exists: `go test ./...`
-   - If `pyproject.toml` exists: `pytest` or `python -m pytest`
-   - If `Makefile` exists with test target: `make test`
-   - Otherwise: Ask user for test command
+1. Look for project conventions to determine the test command:
+   - Check `Makefile` for a `test` target
+   - Check `package.json` scripts for `test`
+   - Check for language-specific tooling:
+     - `build.zig` or `zig.build.zon` → `zig build test`
+     - `Cargo.toml` → `cargo test`
+     - `go.mod` → `go test ./...`
+     - `pyproject.toml` → `pytest`
+   - If unclear, ask the user
 
 2. Capture and summarize the results:
    - If all tests pass: Report success with test count if available
