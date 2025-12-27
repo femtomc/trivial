@@ -10,7 +10,7 @@
     {
       "name": "trivial",
       "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
-      "source": "."
+      "source": "./"
     }
   ]
 }
