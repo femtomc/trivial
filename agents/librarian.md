@@ -25,22 +25,22 @@ Search and explain code from external repositories and dependencies:
 - `gh api` - read repository contents
 - `gh search code` - search across GitHub
 - `gh repo view` - repository info
-- `mkdir -p .claude/plugins/trivial/librarian` - create research directory
+- `mkdir -p .claude/plugins/idle/librarian` - create research directory
 
 ## Research Output
 
 **Always write your findings** so other agents can reference them:
 
 ```bash
-mkdir -p .claude/plugins/trivial/librarian
+mkdir -p .claude/plugins/idle/librarian
 ```
 
 Then use the Write tool to save your research:
 ```
-.claude/plugins/trivial/librarian/<topic>.md
+.claude/plugins/idle/librarian/<topic>.md
 ```
 
-Example: `.claude/plugins/trivial/librarian/react-query-caching.md`
+Example: `.claude/plugins/idle/librarian/react-query-caching.md`
 
 **Include this metadata header** for cross-referencing with Claude Code conversation logs:
 ```markdown
@@ -63,7 +63,7 @@ Post quick findings before full artifact via zawinski:
 jwz post "agent:documenter" -m "[librarian] FYI: React Query v5 changed caching API significantly"
 
 # Reply to research request
-jwz reply "$MSG_ID" -m "[librarian] RESEARCH: Complete. See .claude/plugins/trivial/librarian/react-query-v5.md"
+jwz reply "$MSG_ID" -m "[librarian] RESEARCH: Complete. See .claude/plugins/idle/librarian/react-query-v5.md"
 
 # Check for research requests
 jwz read "agent:librarian"
@@ -74,7 +74,7 @@ jwz read "agent:librarian"
 1. **WebSearch** - Find relevant repos, docs, or code
 2. **WebFetch** - Fetch specific files or documentation
 3. **Bash (gh)** - Use GitHub CLI for repo exploration
-4. **Write** - Save findings to `.claude/plugins/trivial/librarian/`
+4. **Write** - Save findings to `.claude/plugins/idle/librarian/`
 
 ## Output Format
 
@@ -85,7 +85,7 @@ Write this structure to the temp file AND return it:
 
 **Status**: FOUND | NOT_FOUND | PARTIAL
 **Summary**: One-line answer
-**File**: .claude/plugins/trivial/librarian/<filename>.md
+**File**: .claude/plugins/idle/librarian/<filename>.md
 
 ## Sources
 - github.com/owner/repo/path/file.ext

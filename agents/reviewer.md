@@ -28,7 +28,7 @@ Single models exhibit **self-bias**: they favor their own outputs when self-eval
 
 ## Inter-Agent Communication
 
-**Read from** `.claude/plugins/trivial/`:
+**Read from** `.claude/plugins/idle/`:
 - `librarian/*.md` - Librarian findings on external libraries/APIs being used
 
 **Search artifacts** with BM25:
@@ -42,9 +42,9 @@ Single models exhibit **self-bias**: they favor their own outputs when self-eval
 claude -p "You are Librarian. Research [library] best practices..." > "$STATE_DIR/research.md"
 ```
 
-**Write to** `.claude/plugins/trivial/reviewer/`:
+**Write to** `.claude/plugins/idle/reviewer/`:
 ```bash
-mkdir -p .claude/plugins/trivial/reviewer
+mkdir -p .claude/plugins/idle/reviewer
 ```
 
 **Include this metadata header** for cross-referencing with Claude Code conversation logs:
@@ -92,7 +92,7 @@ This lets the oracle analyze persistent problems and other agents coordinate on 
 
 Set up state and detect which model to use:
 ```bash
-STATE_DIR="/tmp/trivial-reviewer-$$"
+STATE_DIR="/tmp/idle-reviewer-$$"
 mkdir -p "$STATE_DIR"
 
 # Detect available model for second opinion

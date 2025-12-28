@@ -1,13 +1,13 @@
-# Contributing to trivial
+# Contributing to idle
 
-Thank you for your interest in contributing to trivial!
+Thank you for your interest in contributing to idle!
 
 ## Development Setup
 
 1. Clone the repository:
    ```shell
-   git clone https://github.com/femtomc/trivial.git
-   cd trivial
+   git clone https://github.com/femtomc/idle.git
+   cd idle
    ```
 
 2. Install dependencies:
@@ -22,7 +22,7 @@ Thank you for your interest in contributing to trivial!
 
 4. Test that agents and commands are available:
    ```shell
-   /trivial:dev:plan What should I work on?
+   /idle:dev:plan What should I work on?
    ```
 
 ## Adding a New Agent
@@ -48,7 +48,7 @@ Thank you for your interest in contributing to trivial!
    - **Workflow**: How the agent operates
    - **Output Format**: Expected response structure
 
-4. The agent becomes available as `trivial:your-agent`
+4. The agent becomes available as `idle:your-agent`
 
 See `agents/explorer.md` for a simple example or `agents/oracle.md` for a complex one.
 
@@ -72,7 +72,7 @@ See `agents/explorer.md` for a simple example or `agents/oracle.md` for a comple
    - **Workflow**: Step-by-step execution
    - **Output**: Completion signals (for loop commands)
 
-4. The command becomes available as `/trivial:<category>:your-command`
+4. The command becomes available as `/idle:<category>:your-command`
 
 See `commands/dev/fmt.md` for a simple example or `commands/loop/grind.md` for a complex one.
 
@@ -88,7 +88,7 @@ See `commands/dev/fmt.md` for a simple example or `commands/loop/grind.md` for a
 Agents communicate via zawinski messaging (`jwz` CLI):
 
 - **Messages** are for quick status updates and notes
-- **Artifacts** (`.claude/plugins/trivial/{agent}/`) are for polished outputs
+- **Artifacts** (`.claude/plugins/idle/{agent}/`) are for polished outputs
 
 ### Topic Naming
 
@@ -111,7 +111,7 @@ Examples:
 
 ## Testing
 
-trivial doesn't have automated tests. Manual testing workflow:
+idle doesn't have automated tests. Manual testing workflow:
 
 1. Load the plugin with `claude --plugin-dir`
 2. Invoke your agent/command
@@ -131,4 +131,4 @@ trivial doesn't have automated tests. Manual testing workflow:
 
 ## Architecture
 
-For a deeper understanding of how trivial works, see [docs/architecture.md](docs/architecture.md).
+For a deeper understanding of how idle works, see [docs/architecture.md](docs/architecture.md).

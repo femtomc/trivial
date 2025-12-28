@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-12-27
+
+### Changed
+
+- **Project renamed from `trivial` to `idle`**
+- All directory paths: `.claude/plugins/idle/`, `.worktrees/idle/`
+- Git branch naming: `idle/issue/<id>`
+- Git config key: `idle.baseRef`
+- Temp directories: `/tmp/idle-*`
+- State files: `.claude/idle-loop.local.md`
+- Environment variable: `IDLE_LOOP_DISABLE`
+- Command namespaces: `idle:dev:*`, `idle:loop:*`
+- GitHub repository: `femtomc/idle`
+
 ## [0.6.1] - 2025-12-27
 
 ### Fixed
@@ -36,12 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Loop state stored via jwz messaging (`loop:current` topic) with JSON schema
 - Stack-based nested loop model (grind → issue)
 - TTL-based staleness detection (2 hour timeout prevents zombie loops)
-- Environment variable escape hatch: `TRIVIAL_LOOP_DISABLE=1`
+- Environment variable escape hatch: `IDLE_LOOP_DISABLE=1`
 - Hooks philosophy documented: "pull over push", "safety over policy", "pointer over payload"
 
 ### Changed
 
-- `/issue` creates worktree with branch `trivial/issue/<id>`
+- `/issue` creates worktree with branch `idle/issue/<id>`
 - Loop state includes worktree_path, branch, base_ref
 - Implementor agent updated with worktree instructions (absolute paths, cd prefix)
 - Loop commands (`/loop`, `/issue`, `/grind`) now use jwz for state management
@@ -86,22 +100,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `scripts/search.py` - BM25 search over agent artifacts (uses `uv run`)
-- Inter-agent communication via `.claude/plugins/trivial/{agent}/` directories
+- Inter-agent communication via `.claude/plugins/idle/{agent}/` directories
 - YAML frontmatter metadata in artifacts for conversation cross-referencing
 - Search capability documented in all reading agents (oracle, reviewer, documenter)
 
 ### Changed
 
-- Artifact storage moved from `/tmp/trivial/` to `.claude/plugins/trivial/`
+- Artifact storage moved from `/tmp/idle/` to `.claude/plugins/idle/`
 - Each agent writes to its own subdirectory (librarian/, reviewer/)
-- Added `.claude/plugins/trivial/` subdirectories to .gitignore
+- Added `.claude/plugins/idle/` subdirectories to .gitignore
 
 ## [0.3.0] - 2025-12-27
 
 ### Added
 
 - `/document` command to invoke documenter agent
-- State directory pattern for Codex/Gemini logs (`/tmp/trivial-<agent>-$$`)
+- State directory pattern for Codex/Gemini logs (`/tmp/idle-<agent>-$$`)
 - `---SUMMARY---` delimiter for Codex responses
 - `---DOCUMENT---` delimiter for Gemini responses
 - Explicit wait/read blocking instructions in all external model agents

@@ -1,13 +1,13 @@
 # Architecture
 
-trivial is a Claude Code plugin that provides multi-model development agents. This document explains how it works for contributors and advanced users.
+idle is a Claude Code plugin that provides multi-model development agents. This document explains how it works for contributors and advanced users.
 
 ## Overview
 
-trivial delegates specialized tasks to different AI models:
+idle delegates specialized tasks to different AI models:
 
 ```
-User → Claude Code → trivial agents/commands
+User → Claude Code → idle agents/commands
                          ↓
          ┌───────────────┼───────────────┐
          ↓               ↓               ↓
@@ -30,7 +30,7 @@ User → Claude Code → trivial agents/commands
 ### Directory Structure
 
 ```
-trivial/
+idle/
 ├── .claude-plugin/
 │   ├── plugin.json      # Plugin metadata
 │   └── marketplace.json # Marketplace listing
@@ -73,7 +73,7 @@ Minimal metadata for the plugin:
 
 ```json
 {
-  "name": "trivial",
+  "name": "idle",
   "version": "0.4.0",
   "description": "Multi-model development agents...",
   "author": { "name": "femtomc" }
@@ -120,11 +120,11 @@ Expected response structure
 - Bash restricted to specific commands only
 
 **Artifact writers** (librarian, documenter):
-- Can create/edit files in `.claude/plugins/trivial/` (librarian) or docs (documenter)
+- Can create/edit files in `.claude/plugins/idle/` (librarian) or docs (documenter)
 - Cannot modify source code
 
 **Reviewer** (reviewer):
-- Writes review artifacts to `.claude/plugins/trivial/reviewer/`
+- Writes review artifacts to `.claude/plugins/idle/reviewer/`
 - Read-only access to source code
 
 
@@ -149,7 +149,7 @@ Step-by-step execution
 Expected completion signals
 ```
 
-Commands are user-invocable via `/trivial:dev:command` or `/trivial:loop:command`.
+Commands are user-invocable via `/idle:dev:command` or `/idle:loop:command`.
 
 ## Loop State Management
 
@@ -188,14 +188,14 @@ Loop state is stored as JSON messages in the `loop:current` topic:
       "mode": "grind",
       "iter": 3,
       "max": 100,
-      "prompt_file": "/tmp/trivial-grind-xxx/prompt.txt"
+      "prompt_file": "/tmp/idle-grind-xxx/prompt.txt"
     },
     {
       "id": "issue-auth-123-1703123456",
       "mode": "issue",
       "iter": 2,
       "max": 10,
-      "prompt_file": "/tmp/trivial-issue-xxx/prompt.txt",
+      "prompt_file": "/tmp/idle-issue-xxx/prompt.txt",
       "issue_id": "auth-123"
     }
   ]
@@ -206,7 +206,7 @@ Key design choices:
 - **Stack model**: Supports nested loops (grind → issue). Top of stack is current loop.
 - **`prompt_file`**: Prompts stored in temp files to avoid JSON escaping issues.
 - **TTL**: States older than 2 hours are considered stale (prevents zombie loops).
-- **Fallback**: If jwz unavailable, falls back to `.claude/trivial-loop.local.md` state file.
+- **Fallback**: If jwz unavailable, falls back to `.claude/idle-loop.local.md` state file.
 
 ### Completion Signals
 
@@ -224,7 +224,7 @@ Commands emit structured signals that the stop hook detects:
 If you get stuck in an infinite loop:
 
 1. `/cancel-loop` - Graceful cancellation via command
-2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
+2. `IDLE_LOOP_DISABLE=1 claude` - Environment variable bypass
 3. `rm -rf .jwz/` - Manual reset of all messaging state
 
 ## Git Worktrees
@@ -234,16 +234,16 @@ Each issue worked via `/issue` or `/grind` gets its own Git worktree for clean i
 ### Structure
 
 ```
-main repo/                          .worktrees/trivial/
+main repo/                          .worktrees/idle/
 ├── src/                            ├── auth-123/     ← issue worktree
-├── .tissue/                        │   └── (branch: trivial/issue/auth-123)
+├── .tissue/                        │   └── (branch: idle/issue/auth-123)
 ├── .worktrees/ (gitignored)        └── perf-456/     ← another issue
-└── ...                                 └── (branch: trivial/issue/perf-456)
+└── ...                                 └── (branch: idle/issue/perf-456)
 ```
 
 ### Lifecycle
 
-1. **Create**: `/issue <id>` creates worktree at `.worktrees/trivial/<id>/`
+1. **Create**: `/issue <id>` creates worktree at `.worktrees/idle/<id>/`
 2. **Work**: Implementor uses absolute paths, Bash commands cd to worktree
 3. **Complete**: Worktree persists for review after issue completes
 4. **Land**: `/land <id>` merges branch to main and cleans up
@@ -254,7 +254,7 @@ main repo/                          .worktrees/trivial/
 |---------|---------|
 | `/issue <id>` | Create worktree and work issue |
 | `/land <id>` | Merge worktree branch to main |
-| `/worktree list` | Show all trivial worktrees |
+| `/worktree list` | Show all idle worktrees |
 | `/worktree status` | Show worktree dirty/clean status |
 | `/worktree remove <id>` | Remove worktree without merging |
 | `/worktree prune` | Clean up orphaned worktrees |
@@ -264,16 +264,16 @@ main repo/                          .worktrees/trivial/
 The stop hook injects worktree context on each iteration:
 ```
 WORKTREE CONTEXT:
-- Working directory: /path/to/.worktrees/trivial/auth-123
-- Branch: trivial/issue/auth-123
+- Working directory: /path/to/.worktrees/idle/auth-123
+- Branch: idle/issue/auth-123
 - Issue: auth-123
 
-IMPORTANT: All file operations must use absolute paths under /path/to/.worktrees/trivial/auth-123
+IMPORTANT: All file operations must use absolute paths under /path/to/.worktrees/idle/auth-123
 ```
 
 ## Hooks Philosophy
 
-trivial uses a **minimal hooks strategy** to avoid context bloat:
+idle uses a **minimal hooks strategy** to avoid context bloat:
 
 - **Pull over push** - Let Claude fetch state on-demand via jwz/tissue/git
 - **Safety over policy** - Hooks prevent damage; commands enforce workflows
@@ -312,7 +312,7 @@ Before context compaction, persists current task state to `loop:anchor` topic:
 }
 ```
 
-Emits single line: `"TRIVIAL: Recovery anchor saved. After compaction: jwz read loop:anchor"`
+Emits single line: `"IDLE: Recovery anchor saved. After compaction: jwz read loop:anchor"`
 
 ### Hooks We Don't Use
 
@@ -336,7 +336,7 @@ The `/orchestrate` command enables a context-saving pattern where the main agent
 │  Blocked: Write, Edit (enforced by PreToolUse hook)         │
 └─────────────────────────────────────────────────────────────┘
                               │
-                              │ Task tool → trivial:implementor
+                              │ Task tool → idle:implementor
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      IMPLEMENTOR                             │
@@ -358,7 +358,7 @@ The `/orchestrate` command enables a context-saving pattern where the main agent
 
 When orchestrator mode is active (`mode:current = orchestrator` in jwz):
 - PreToolUse hook blocks Write and Edit tools
-- Redirects to use Task tool with `trivial:implementor`
+- Redirects to use Task tool with `idle:implementor`
 
 ### Implementor Return Format
 
@@ -429,7 +429,7 @@ Agents communicate asynchronously via [zawinski](https://github.com/femtomc/zawi
 
 | Pattern | Example | Purpose |
 |---------|---------|---------|
-| `project:<name>` | `project:trivial` | Project-wide announcements |
+| `project:<name>` | `project:idle` | Project-wide announcements |
 | `issue:<id>` | `issue:auth-123` | Per-issue discussion |
 | `agent:<name>` | `agent:oracle` | Direct agent communication |
 
@@ -469,7 +469,7 @@ Examples:
 |----------|-----------|----------|
 | Quick status update | Message | `.jwz/` |
 | Research finding (quick) | Message | `.jwz/` |
-| Research finding (full) | Artifact | `.claude/plugins/trivial/{agent}/` |
+| Research finding (full) | Artifact | `.claude/plugins/idle/{agent}/` |
 | Design decision | Artifact + message | Both |
 
 Messages are ephemeral notes; artifacts are durable references.
@@ -482,7 +482,7 @@ Messages are ephemeral notes; artifacts are durable references.
 4. Define the workflow
 5. Specify output format
 
-The agent becomes available automatically as `trivial:your-agent`.
+The agent becomes available automatically as `idle:your-agent`.
 
 ## Adding New Commands
 
@@ -491,7 +491,7 @@ The agent becomes available automatically as `trivial:your-agent`.
 3. Document usage and workflow
 4. Define completion signals if it's a loop command
 
-The command becomes available as `/trivial:category:your-command`.
+The command becomes available as `/idle:category:your-command`.
 
 ## Dependencies
 

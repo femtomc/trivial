@@ -24,8 +24,8 @@ You do NOT:
 ## Task Delegation
 
 You may call Task ONLY for:
-- `trivial:explorer` - Local codebase search
-- `trivial:librarian` - External documentation research
+- `idle:explorer` - Local codebase search
+- `idle:librarian` - External documentation research
 
 You MUST NOT spawn other implementors or call oracle/reviewer/documenter.
 

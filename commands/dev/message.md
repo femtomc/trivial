@@ -19,7 +19,7 @@ Quick messaging for agent coordination.
 
 ```
 /message issue:auth-123 "Found the bug - missing null check"
-/message project:trivial "Starting v0.5.0 release"
+/message project:idle "Starting v0.5.0 release"
 /message read agent:oracle
 /message search "security"
 ```

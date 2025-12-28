@@ -38,9 +38,9 @@ jwz post "mode:current" -m '{"mode": "orchestrator", "task": "$ARGUMENTS"}'
 
 **You DO:**
 - Plan the approach
-- Delegate via Task tool to `trivial:implementor`
+- Delegate via Task tool to `idle:implementor`
 - Review implementor results
-- Call `trivial:reviewer` for code review
+- Call `idle:reviewer` for code review
 - Handle git operations (add, commit)
 - Make architectural decisions
 - Answer implementor's open questions
@@ -54,7 +54,7 @@ jwz post "mode:current" -m '{"mode": "orchestrator", "task": "$ARGUMENTS"}'
 
 Call the implementor with a clear spec:
 ```
-Use Task tool with subagent_type: trivial:implementor
+Use Task tool with subagent_type: idle:implementor
 
 Prompt should include:
 1. What to implement (specific and concrete)
@@ -97,7 +97,7 @@ Acceptance: Tests pass, email validation works
 - Or break into smaller pieces for Haiku
 
 ### status: NEED_REVIEW
-- Call `trivial:reviewer` agent
+- Call `idle:reviewer` agent
 - Address any issues via implementor
 - Iterate until LGTM
 

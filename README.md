@@ -1,4 +1,4 @@
-# trivial
+# idle
 
 A Claude Code plugin for long-running agentic workflows with multi-model collaboration.
 
@@ -18,7 +18,7 @@ Inspired by AmpCode, Anthropic's research on agentic harnesses, and academic wor
 
 ### How it works
 
-trivial delegates tasks to the right model for the job: fast models (haiku) handle search, while powerful models (opus) tackle reasoning. For critical decisions, opus agents consult a "second opinion" to validate conclusions:
+idle delegates tasks to the right model for the job: fast models (haiku) handle search, while powerful models (opus) tackle reasoning. For critical decisions, opus agents consult a "second opinion" to validate conclusions:
 
 - **If codex/gemini installed**: Uses external model for maximum architectural diversity
 - **If not installed**: Falls back to `claude -p` which starts fresh context, still breaking self-bias
@@ -78,25 +78,25 @@ When these are not installed, agents fall back to `claude -p` for second opinion
 Install dependencies first:
 
 ```shell
-curl -fsSL https://raw.githubusercontent.com/femtomc/trivial/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/femtomc/idle/main/install.sh | sh
 ```
 
 Then in Claude Code:
 
 ```
-/plugin marketplace add femtomc/trivial
-/plugin install trivial@trivial
+/plugin marketplace add femtomc/idle
+/plugin install idle@idle
 ```
 
 ### For development
 
 ```shell
-claude --plugin-dir /path/to/trivial
+claude --plugin-dir /path/to/idle
 ```
 
 ## Quickstart
 
-A typical workflow with trivial:
+A typical workflow with idle:
 
 ```shell
 # 1. Plan your work
@@ -126,8 +126,8 @@ tissue new "Refactor database queries" -p 2 -t tech-debt
 
 # Grind through P1 issues automatically
 /grind priority:1
-# → Works trivial-abc123 (authentication)
-# → Works trivial-def456 (login bug)
+# → Works idle-abc123 (authentication)
+# → Works idle-def456 (login bug)
 # → Reports: 2 issues completed, 1 remaining
 ```
 

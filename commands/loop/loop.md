@@ -34,7 +34,7 @@ RUN_ID="loop-$(date +%s)-$$"
 [ ! -d .jwz ] && jwz init
 
 # Create temp directory for prompt file
-STATE_DIR="/tmp/trivial-$RUN_ID"
+STATE_DIR="/tmp/idle-$RUN_ID"
 mkdir -p "$STATE_DIR"
 
 # Store prompt in file (avoids JSON escaping issues)
@@ -91,5 +91,5 @@ Describe the blocker and ask for user guidance.
 
 If you get stuck in an infinite loop:
 1. `/cancel-loop` - Graceful cancellation
-2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
+2. `IDLE_LOOP_DISABLE=1 claude` - Environment variable bypass
 3. Delete `.jwz/` directory - Manual reset

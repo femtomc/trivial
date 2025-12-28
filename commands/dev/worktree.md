@@ -4,12 +4,12 @@ description: Manage Git worktrees for issues
 
 # Worktree Command
 
-Manage trivial's Git worktrees for issue isolation.
+Manage idle's Git worktrees for issue isolation.
 
 ## Usage
 
 ```
-/worktree list              # List all trivial worktrees
+/worktree list              # List all idle worktrees
 /worktree status            # Show worktree status with dirty/clean
 /worktree remove <issue-id> # Remove a worktree (without merging)
 /worktree prune             # Remove orphaned worktrees
@@ -19,15 +19,15 @@ Manage trivial's Git worktrees for issue isolation.
 
 ### list
 
-Show all trivial worktrees:
+Show all idle worktrees:
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
-echo "Trivial worktrees:"
+echo "Idle worktrees:"
 echo ""
 
 git worktree list | while read -r line; do
     WT_PATH=$(echo "$line" | awk '{print $1}')
-    if [[ "$WT_PATH" == *".worktrees/trivial/"* ]]; then
+    if [[ "$WT_PATH" == *".worktrees/idle/"* ]]; then
         BRANCH=$(echo "$line" | awk '{print $3}' | tr -d '[]')
         ISSUE_ID=$(basename "$WT_PATH")
         echo "  $ISSUE_ID"
@@ -46,7 +46,7 @@ REPO_ROOT=$(git rev-parse --show-toplevel)
 echo "Worktree Status:"
 echo ""
 
-for WT_DIR in "$REPO_ROOT/.worktrees/trivial/"*/; do
+for WT_DIR in "$REPO_ROOT/.worktrees/idle/"*/; do
     [[ -d "$WT_DIR" ]] || continue
     ISSUE_ID=$(basename "$WT_DIR")
 
@@ -76,8 +76,8 @@ Remove a worktree without merging:
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
 SAFE_ID=$(printf '%s' "$ARGUMENTS" | tr -cd 'a-zA-Z0-9_-')
-BRANCH="trivial/issue/$SAFE_ID"
-WORKTREE_PATH="$REPO_ROOT/.worktrees/trivial/$SAFE_ID"
+BRANCH="idle/issue/$SAFE_ID"
+WORKTREE_PATH="$REPO_ROOT/.worktrees/idle/$SAFE_ID"
 
 # Check if worktree exists
 if ! git worktree list | grep -qF -- "$WORKTREE_PATH"; then
@@ -113,8 +113,8 @@ git worktree prune -v
 
 # Also clean up empty directories
 REPO_ROOT=$(git rev-parse --show-toplevel)
-if [[ -d "$REPO_ROOT/.worktrees/trivial" ]]; then
-    find "$REPO_ROOT/.worktrees/trivial" -type d -empty -delete 2>/dev/null || true
+if [[ -d "$REPO_ROOT/.worktrees/idle" ]]; then
+    find "$REPO_ROOT/.worktrees/idle" -type d -empty -delete 2>/dev/null || true
 fi
 
 echo "Done"
@@ -122,9 +122,9 @@ echo "Done"
 
 ## Worktree Locations
 
-Trivial worktrees are stored at:
+Idle worktrees are stored at:
 ```
-<repo-root>/.worktrees/trivial/<issue-id>/
+<repo-root>/.worktrees/idle/<issue-id>/
 ```
 
 This directory is automatically added to `.gitignore`.
@@ -145,7 +145,7 @@ git -C "$WORKTREE_PATH" stash push -m "WIP: issue-id"
 
 ### Switch to a worktree in terminal
 ```bash
-cd "$REPO_ROOT/.worktrees/trivial/issue-id"
+cd "$REPO_ROOT/.worktrees/idle/issue-id"
 ```
 
 ## Error Recovery
@@ -165,10 +165,10 @@ git worktree add -b "$BRANCH" "$WORKTREE_PATH" main
 ```
 
 ### Clean up everything
-Nuclear option - remove all trivial worktrees:
+Nuclear option - remove all idle worktrees:
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
-for WT in "$REPO_ROOT/.worktrees/trivial/"*/; do
+for WT in "$REPO_ROOT/.worktrees/idle/"*/; do
     git worktree remove --force "$WT" 2>/dev/null || rm -rf "$WT"
 done
 git worktree prune

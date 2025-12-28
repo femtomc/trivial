@@ -6,7 +6,7 @@
 # ]
 # ///
 """
-BM25 search over trivial agent artifacts.
+BM25 search over idle agent artifacts.
 
 Usage:
     ./scripts/search.py "query terms here"
@@ -125,12 +125,12 @@ def search(query: str, documents: list[dict], top_k: int = 10) -> list[tuple[dic
 
 
 def main():
-    parser = argparse.ArgumentParser(description='BM25 search over trivial agent artifacts')
+    parser = argparse.ArgumentParser(description='BM25 search over idle agent artifacts')
     parser.add_argument('query', help='Search query')
     parser.add_argument('--top', '-n', type=int, default=10, help='Number of results (default: 10)')
     parser.add_argument('--agent', '-a', type=str,
                         help='Filter to specific agent subdirectory')
-    parser.add_argument('--path', '-p', type=Path, default=Path('.claude/plugins/trivial'),
+    parser.add_argument('--path', '-p', type=Path, default=Path('.claude/plugins/idle'),
                         help='Path to artifacts directory')
     args = parser.parse_args()
 

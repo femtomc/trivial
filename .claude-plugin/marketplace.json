@@ -1,5 +1,5 @@
 {
-  "name": "trivial",
+  "name": "idle",
   "owner": {
     "name": "femtomc"
   },
@@ -8,7 +8,7 @@
   },
   "plugins": [
     {
-      "name": "trivial",
+      "name": "idle",
       "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
       "source": "./"
     }

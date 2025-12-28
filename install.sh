@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-# trivial dependency installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/femtomc/trivial/main/install.sh | sh
+# idle dependency installer
+# Usage: curl -fsSL https://raw.githubusercontent.com/femtomc/idle/main/install.sh | sh
 
 # Colors for output
 if [ -t 1 ]; then
@@ -133,7 +133,7 @@ main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "  ${BLUE}trivial${NC} - dependency installer"
+    echo "  ${BLUE}idle${NC} - dependency installer"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
@@ -155,10 +155,10 @@ main() {
     echo ""
     echo "Install the plugin in Claude Code:"
     echo ""
-    echo "  ${GREEN}/plugin marketplace add femtomc/trivial${NC}"
-    echo "  ${GREEN}/plugin install trivial@trivial${NC}"
+    echo "  ${GREEN}/plugin marketplace add femtomc/idle${NC}"
+    echo "  ${GREEN}/plugin install idle@idle${NC}"
     echo ""
-    echo "Then start using trivial:"
+    echo "Then start using idle:"
     echo ""
     echo "  ${BLUE}tissue init${NC}      # Initialize issue tracker"
     echo "  ${BLUE}jwz init${NC}         # Initialize messaging"

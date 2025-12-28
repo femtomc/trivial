@@ -29,8 +29,8 @@ Before landing:
        echo "Error: Invalid issue ID"
        exit 1
    fi
-   BRANCH="trivial/issue/$SAFE_ID"
-   WORKTREE_PATH="$REPO_ROOT/.worktrees/trivial/$SAFE_ID"
+   BRANCH="idle/issue/$SAFE_ID"
+   WORKTREE_PATH="$REPO_ROOT/.worktrees/idle/$SAFE_ID"
 
    if ! git worktree list | grep -qF -- "$WORKTREE_PATH"; then
        echo "Error: No worktree found for issue $ARGUMENTS"

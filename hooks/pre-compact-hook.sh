@@ -1,5 +1,5 @@
 #!/bin/bash
-# trivial PreCompact hook - persist recovery anchor before context compaction
+# idle PreCompact hook - persist recovery anchor before context compaction
 # Writes minimal state to jwz for recovery after compaction
 
 set -e
@@ -69,4 +69,4 @@ ANCHOR=$(jq -n \
 jwz post "loop:anchor" -m "$ANCHOR" 2>/dev/null || true
 
 # Emit minimal pointer (this goes to context)
-echo "TRIVIAL: Recovery anchor saved. After compaction: jwz read loop:anchor"
+echo "IDLE: Recovery anchor saved. After compaction: jwz read loop:anchor"

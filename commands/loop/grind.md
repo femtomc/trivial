@@ -29,8 +29,8 @@ Grind pushes a frame onto the loop stack. When it calls `/issue`, that pushes an
 ## Worktrees
 
 Each issue worked via `/issue` gets its own Git worktree:
-- Worktree: `.worktrees/trivial/<issue-id>/`
-- Branch: `trivial/issue/<issue-id>`
+- Worktree: `.worktrees/idle/<issue-id>/`
+- Branch: `idle/issue/<issue-id>`
 
 Worktrees persist after grind completes for review. Use `/land <issue-id>` to merge completed issues.
 
@@ -51,7 +51,7 @@ RUN_ID="grind-$(date +%s)-$$"
 [ ! -d .jwz ] && jwz init
 
 # Create temp directory for prompt/state
-STATE_DIR="/tmp/trivial-$RUN_ID"
+STATE_DIR="/tmp/idle-$RUN_ID"
 mkdir -p "$STATE_DIR"
 
 # Store filter as prompt
@@ -157,5 +157,5 @@ Report: X issues completed, Y remaining.
 
 If you get stuck in an infinite loop:
 1. `/cancel-loop` - Graceful cancellation
-2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
+2. `IDLE_LOOP_DISABLE=1 claude` - Environment variable bypass
 3. Delete `.jwz/` directory - Manual reset

@@ -27,7 +27,7 @@ You **advise only** - you do NOT modify code. You are called when the main agent
 
 ## Inter-Agent Communication
 
-**Read from** `.claude/plugins/trivial/`:
+**Read from** `.claude/plugins/idle/`:
 - `librarian/*.md` - Librarian findings on external libraries/patterns
 - `reviewer/*.md` - Reviewer findings that may provide context on persistent issues
 
@@ -76,7 +76,7 @@ jwz reply "$MSG_ID" -m "[oracle] Yes, this needs mutex. See recommendation."
 
 Set up state and detect which model to use:
 ```bash
-STATE_DIR="/tmp/trivial-oracle-$$"
+STATE_DIR="/tmp/idle-oracle-$$"
 mkdir -p "$STATE_DIR"
 
 # Detect available model for second opinion

@@ -1,5 +1,5 @@
 {
-  "description": "trivial plugin hooks - loops, safety, orchestration, and recovery",
+  "description": "idle plugin hooks - loops, safety, orchestration, and recovery",
   "hooks": {
     "Stop": [
       {

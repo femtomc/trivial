@@ -20,7 +20,7 @@ Like `/work`, but with iteration - keep trying until the issue is resolved. Each
 ## How It Works
 
 This command:
-1. Creates a Git worktree for the issue (branch: `trivial/issue/<id>`)
+1. Creates a Git worktree for the issue (branch: `idle/issue/<id>`)
 2. Uses a **Stop hook** to intercept exit and force re-entry until resolved
 3. Stores loop state via jwz messaging (including worktree path)
 4. Delegates implementation to the `implementor` agent
@@ -50,7 +50,7 @@ cd "$REPO_ROOT"
 
 # Resolve base ref (config > origin/HEAD > main > master > HEAD)
 BASE_REF=""
-BASE_REF=$(git config trivial.baseRef 2>/dev/null) || true
+BASE_REF=$(git config idle.baseRef 2>/dev/null) || true
 if [[ -z "$BASE_REF" ]]; then
     BASE_REF=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||') || true
 fi
@@ -70,8 +70,8 @@ if [[ -z "$SAFE_ID" ]]; then
     echo "Error: Issue ID '$ISSUE_ID' contains no valid characters"
     exit 1
 fi
-BRANCH="trivial/issue/$SAFE_ID"
-WORKTREE_PATH="$REPO_ROOT/.worktrees/trivial/$SAFE_ID"
+BRANCH="idle/issue/$SAFE_ID"
+WORKTREE_PATH="$REPO_ROOT/.worktrees/idle/$SAFE_ID"
 
 # Ensure .worktrees/ is gitignored
 if ! grep -q '^\.worktrees/' "$REPO_ROOT/.gitignore" 2>/dev/null; then
@@ -96,7 +96,7 @@ else
 fi
 
 # Create temp directory for prompt file
-STATE_DIR="/tmp/trivial-$RUN_ID"
+STATE_DIR="/tmp/idle-$RUN_ID"
 mkdir -p "$STATE_DIR"
 tissue show "$ISSUE_ID" > "$STATE_DIR/prompt.txt"
 

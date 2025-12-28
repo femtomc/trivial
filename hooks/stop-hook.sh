@@ -1,5 +1,5 @@
 #!/bin/bash
-# trivial stop hook - implements self-referential loops via jwz messaging
+# idle stop hook - implements self-referential loops via jwz messaging
 # Intercepts Claude's exit to force continuation until task complete
 
 set -e
@@ -17,12 +17,12 @@ if [[ -n "$CWD" ]]; then
 fi
 
 # Environment variable escape hatch
-if [[ "${TRIVIAL_LOOP_DISABLE:-}" == "1" ]]; then
+if [[ "${IDLE_LOOP_DISABLE:-}" == "1" ]]; then
     exit 0
 fi
 
 # State file fallback location
-STATE_FILE=".claude/trivial-loop.local.md"
+STATE_FILE=".claude/idle-loop.local.md"
 
 # Try to read loop state from jwz first
 STATE=""

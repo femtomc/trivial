@@ -39,7 +39,7 @@ Stop the current iteration loop gracefully.
 
 2. **Fallback: Check state file**:
    ```bash
-   STATE_FILE=".claude/trivial-loop.local.md"
+   STATE_FILE=".claude/idle-loop.local.md"
    if [ -f "$STATE_FILE" ]; then
        ITER=$(grep '^iteration:' "$STATE_FILE" | sed 's/iteration: *//')
        echo "Cancelling loop at iteration $ITER (state file)"
@@ -50,10 +50,10 @@ Stop the current iteration loop gracefully.
 
 3. **Clean up temp state** (if session ID known):
    ```bash
-   if [ -n "$TRIVIAL_SESSION_ID" ]; then
-       SID=$(printf '%s' "$TRIVIAL_SESSION_ID" | tr -cd 'a-zA-Z0-9_-')
-       [ -n "$SID" ] && rm -rf "/tmp/trivial-$SID"
-       unset TRIVIAL_SESSION_ID
+   if [ -n "$IDLE_SESSION_ID" ]; then
+       SID=$(printf '%s' "$IDLE_SESSION_ID" | tr -cd 'a-zA-Z0-9_-')
+       [ -n "$SID" ] && rm -rf "/tmp/idle-$SID"
+       unset IDLE_SESSION_ID
    fi
    ```
 
@@ -65,7 +65,7 @@ If `/cancel-loop` doesn't work:
 
 1. **Environment variable**: Start new session with loops disabled:
    ```bash
-   TRIVIAL_LOOP_DISABLE=1 claude
+   IDLE_LOOP_DISABLE=1 claude
    ```
 
 2. **Manual reset**: Delete the jwz topic:

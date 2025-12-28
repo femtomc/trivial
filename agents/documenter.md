@@ -27,7 +27,7 @@ If you wrote documentation alone, you'd exhibit **self-bias**—favoring phrasin
 
 ## Inter-Agent Communication
 
-**Read from** `.claude/plugins/trivial/`:
+**Read from** `.claude/plugins/idle/`:
 - `librarian/*.md` - Librarian findings on external libraries/APIs
 
 **Search artifacts** with BM25:
@@ -43,7 +43,7 @@ claude -p "You are Librarian. Research [library/API/topic] and explain:
 - Key APIs and patterns
 - Common usage examples
 
-Save findings to .claude/plugins/trivial/librarian/[topic].md" > "$STATE_DIR/research.log" 2>&1
+Save findings to .claude/plugins/idle/librarian/[topic].md" > "$STATE_DIR/research.log" 2>&1
 ```
 
 Read these files to incorporate external research into your documentation.
@@ -84,7 +84,7 @@ jwz search "caching"
 
 Set up state and detect which model to use:
 ```bash
-STATE_DIR="/tmp/trivial-documenter-$$"
+STATE_DIR="/tmp/idle-documenter-$$"
 mkdir -p "$STATE_DIR"
 
 # Detect available model for writing

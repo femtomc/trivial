@@ -1,10 +1,10 @@
 #!/bin/bash
-# Smoke test for trivial worktree workflow
+# Smoke test for idle worktree workflow
 # Run this manually in a test repository with tissue set up
 
 set -e
 
-echo "=== Trivial Worktree Smoke Test ==="
+echo "=== Idle Worktree Smoke Test ==="
 echo ""
 echo "Prerequisites:"
 echo "  - tissue installed and configured"

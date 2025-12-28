@@ -1,5 +1,5 @@
 #!/bin/bash
-# trivial PreToolUse hook - safety guardrails and orchestrator mode enforcement
+# idle PreToolUse hook - safety guardrails and orchestrator mode enforcement
 
 set -e
 
@@ -31,7 +31,7 @@ if command -v jwz >/dev/null 2>&1 && [[ -d .jwz ]]; then
             cat <<EOF
 {
   "decision": "block",
-  "reason": "ORCHESTRATOR MODE: You are orchestrating, not implementing. Delegate code changes to the implementor agent using: Task tool with subagent_type='trivial:implementor'"
+  "reason": "ORCHESTRATOR MODE: You are orchestrating, not implementing. Delegate code changes to the implementor agent using: Task tool with subagent_type='idle:implementor'"
 }
 EOF
             exit 0
