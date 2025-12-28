@@ -49,11 +49,20 @@ cd "$REPO_ROOT"
 [ ! -d .jwz ] && jwz init
 
 # Resolve base ref (config > origin/HEAD > main > master > HEAD)
-BASE_REF=$(git config trivial.baseRef 2>/dev/null || \
-           git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||' || \
-           (git show-ref --verify refs/heads/main >/dev/null 2>&1 && echo main) || \
-           (git show-ref --verify refs/heads/master >/dev/null 2>&1 && echo master) || \
-           echo HEAD)
+BASE_REF=""
+BASE_REF=$(git config trivial.baseRef 2>/dev/null) || true
+if [[ -z "$BASE_REF" ]]; then
+    BASE_REF=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||') || true
+fi
+if [[ -z "$BASE_REF" ]] && git show-ref --verify refs/heads/main >/dev/null 2>&1; then
+    BASE_REF="main"
+fi
+if [[ -z "$BASE_REF" ]] && git show-ref --verify refs/heads/master >/dev/null 2>&1; then
+    BASE_REF="master"
+fi
+if [[ -z "$BASE_REF" ]]; then
+    BASE_REF="HEAD"
+fi
 
 # Sanitize issue ID for branch name
 SAFE_ID=$(printf '%s' "$ISSUE_ID" | tr -cd 'a-zA-Z0-9_-')
@@ -85,7 +94,10 @@ mkdir -p "$STATE_DIR"
 tissue show "$ISSUE_ID" > "$STATE_DIR/prompt.txt"
 
 # Check if we're nested inside grind (existing stack)
-EXISTING=$(jwz read "loop:current" 2>/dev/null | tail -1 || echo '{"stack":[]}')
+EXISTING=$(jwz read "loop:current" 2>/dev/null | tail -1)
+if [[ -z "$EXISTING" ]] || ! echo "$EXISTING" | jq -e . >/dev/null 2>&1; then
+    EXISTING='{"stack":[]}'
+fi
 EXISTING_STACK=$(echo "$EXISTING" | jq -c '.stack // []')
 PARENT_RUN_ID=$(echo "$EXISTING" | jq -r '.run_id // empty')
 ACTIVE_RUN_ID="${PARENT_RUN_ID:-$RUN_ID}"

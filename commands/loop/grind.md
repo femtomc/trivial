@@ -58,9 +58,10 @@ mkdir -p "$STATE_DIR"
 echo "$ARGUMENTS" > "$STATE_DIR/prompt.txt"
 echo "0" > "$STATE_DIR/count"
 
-# Post initial state to jwz
+# Post initial state to jwz (properly escape filter for JSON)
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"grind\",\"iter\":1,\"max\":100,\"prompt_file\":\"$STATE_DIR/prompt.txt\",\"filter\":\"$ARGUMENTS\"}]}"
+FILTER_JSON=$(printf '%s' "$ARGUMENTS" | jq -Rs '.')
+jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"grind\",\"iter\":1,\"max\":100,\"prompt_file\":\"$STATE_DIR/prompt.txt\",\"filter\":$FILTER_JSON}]}"
 
 # Announce session start
 jwz post "project:$(basename $PWD)" -m "[grind] STARTED: Session $RUN_ID with filter: $ARGUMENTS"

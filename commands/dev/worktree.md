@@ -50,11 +50,12 @@ for WT_DIR in "$REPO_ROOT/.worktrees/trivial/"*/; do
     [[ -d "$WT_DIR" ]] || continue
     ISSUE_ID=$(basename "$WT_DIR")
 
-    # Check if dirty
-    if git -C "$WT_DIR" diff --quiet 2>/dev/null; then
+    # Check if dirty (staged or unstaged changes)
+    if git -C "$WT_DIR" diff --quiet 2>/dev/null && \
+       git -C "$WT_DIR" diff --cached --quiet 2>/dev/null; then
         STATUS="clean"
     else
-        STATUS="DIRTY"
+        STATUS="dirty"
     fi
 
     # Count commits ahead
@@ -79,13 +80,14 @@ BRANCH="trivial/issue/$SAFE_ID"
 WORKTREE_PATH="$REPO_ROOT/.worktrees/trivial/$SAFE_ID"
 
 # Check if worktree exists
-if ! git worktree list | grep -q "$WORKTREE_PATH"; then
+if ! git worktree list | grep -qF -- "$WORKTREE_PATH"; then
     echo "Error: No worktree found for $ARGUMENTS"
     exit 1
 fi
 
-# Check for uncommitted changes
-if ! git -C "$WORKTREE_PATH" diff --quiet 2>/dev/null; then
+# Check for uncommitted changes (staged or unstaged)
+if ! git -C "$WORKTREE_PATH" diff --quiet 2>/dev/null || \
+   ! git -C "$WORKTREE_PATH" diff --cached --quiet 2>/dev/null; then
     echo "Warning: Worktree has uncommitted changes"
     git -C "$WORKTREE_PATH" status --short
     echo ""

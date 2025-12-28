@@ -132,39 +132,40 @@ if [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
         tail -1 || true)
 
     # Check for completion signals based on mode
+    # Use printf instead of echo to handle arbitrary data safely
     case "$MODE" in
         loop)
-            if echo "$LAST_MESSAGE" | grep -q '<loop-done>COMPLETE</loop-done>'; then
+            if printf '%s' "$LAST_MESSAGE" | grep -qF -- '<loop-done>COMPLETE</loop-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="COMPLETE"
-            elif echo "$LAST_MESSAGE" | grep -q '<loop-done>MAX_ITERATIONS</loop-done>'; then
+            elif printf '%s' "$LAST_MESSAGE" | grep -qF -- '<loop-done>MAX_ITERATIONS</loop-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="MAX_ITERATIONS"
-            elif echo "$LAST_MESSAGE" | grep -q '<loop-done>STUCK</loop-done>'; then
+            elif printf '%s' "$LAST_MESSAGE" | grep -qF -- '<loop-done>STUCK</loop-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="STUCK"
             fi
             ;;
         issue)
-            if echo "$LAST_MESSAGE" | grep -q '<loop-done>COMPLETE</loop-done>'; then
+            if printf '%s' "$LAST_MESSAGE" | grep -qF -- '<loop-done>COMPLETE</loop-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="COMPLETE"
-            elif echo "$LAST_MESSAGE" | grep -q '<loop-done>MAX_ITERATIONS</loop-done>'; then
+            elif printf '%s' "$LAST_MESSAGE" | grep -qF -- '<loop-done>MAX_ITERATIONS</loop-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="MAX_ITERATIONS"
-            elif echo "$LAST_MESSAGE" | grep -q '<loop-done>STUCK</loop-done>'; then
+            elif printf '%s' "$LAST_MESSAGE" | grep -qF -- '<loop-done>STUCK</loop-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="STUCK"
-            elif echo "$LAST_MESSAGE" | grep -q '<issue-complete>DONE</issue-complete>'; then
+            elif printf '%s' "$LAST_MESSAGE" | grep -qF -- '<issue-complete>DONE</issue-complete>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="COMPLETE"
             fi
             ;;
         grind)
-            if echo "$LAST_MESSAGE" | grep -q '<grind-done>NO_MORE_ISSUES</grind-done>'; then
+            if printf '%s' "$LAST_MESSAGE" | grep -qF -- '<grind-done>NO_MORE_ISSUES</grind-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="NO_MORE_ISSUES"
-            elif echo "$LAST_MESSAGE" | grep -q '<grind-done>MAX_ISSUES</grind-done>'; then
+            elif printf '%s' "$LAST_MESSAGE" | grep -qF -- '<grind-done>MAX_ISSUES</grind-done>'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="MAX_ISSUES"
             fi
