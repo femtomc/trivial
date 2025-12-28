@@ -24,7 +24,12 @@ Filter examples: `repl`, `epic:slop2-abc`, `priority:1`
 
 ```bash
 # Generate unique session ID
-SID="$(date +%s)-$$"
+SID="${TRIVIAL_SESSION_ID:-$(date +%s)-$$}"
+
+# Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
+SID=$(printf '%s' "$SID" | tr -cd 'a-zA-Z0-9_-')
+[[ -z "$SID" ]] && SID="$(date +%s)-$$"
+
 export TRIVIAL_SESSION_ID="$SID"
 STATE_DIR="/tmp/trivial-$SID"
 mkdir -p "$STATE_DIR"

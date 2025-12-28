@@ -106,17 +106,21 @@ Expected response structure
 
 ### Agent Patterns
 
-**Read-only agents** (oracle, explorer, librarian):
+**Read-only agents** (oracle, explorer):
 - Cannot write/edit files
 - Bash restricted to specific commands only
 
-**Writer agents** (documenter):
-- Can create/edit documentation files
+**Artifact writers** (librarian, documenter):
+- Can create/edit files in `.claude/plugins/trivial/` (librarian) or docs (documenter)
 - Cannot modify source code
 
-**Full access** (reviewer, planner):
-- Can read, analyze, and potentially suggest edits
-- Typically have restricted Bash usage
+**Reviewer** (reviewer):
+- Writes review artifacts to `.claude/plugins/trivial/reviewer/`
+- Read-only access to source code
+
+**Issue tracker access** (planner):
+- Full access to `tissue` commands for issue management
+- Read-only access to code and artifacts
 
 ## Command Structure
 
@@ -149,7 +153,12 @@ Loop commands (`/loop`, `/grind`, `/issue`) maintain state across iterations:
 
 ```bash
 # Unique session ID prevents conflicts
-SID="$(date +%s)-$$"
+SID="${TRIVIAL_SESSION_ID:-$(date +%s)-$$}"
+
+# Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
+SID=$(printf '%s' "$SID" | tr -cd 'a-zA-Z0-9_-')
+[[ -z "$SID" ]] && SID="$(date +%s)-$$"
+
 export TRIVIAL_SESSION_ID="$SID"
 STATE_DIR="/tmp/trivial-$SID"
 mkdir -p "$STATE_DIR"

@@ -85,7 +85,10 @@ def load_documents(base_path: Path, agent_filter: str | None = None) -> list[dic
             continue
 
         for md_file in agent_path.glob('*.md'):
-            content = md_file.read_text()
+            try:
+                content = md_file.read_text(encoding='utf-8', errors='replace')
+            except (OSError, PermissionError):
+                continue  # Skip unreadable files
             metadata = extract_metadata(content)
 
             documents.append({

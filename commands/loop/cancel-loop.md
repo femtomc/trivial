@@ -10,7 +10,10 @@ Stop the current iteration loop.
 
 1. Find session state:
    ```bash
-   STATE_DIR="/tmp/trivial-$TRIVIAL_SESSION_ID"
+   # Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
+   SID=$(printf '%s' "$TRIVIAL_SESSION_ID" | tr -cd 'a-zA-Z0-9_-')
+   [[ -z "$SID" ]] && { echo "No valid session ID"; exit 1; }
+   STATE_DIR="/tmp/trivial-$SID"
    ```
 
 2. Check for active issue:

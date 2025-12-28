@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-12-27
+
+### Fixed
+
+- **Security**: Session ID sanitization to prevent path traversal in loop commands
+- **Security**: Use `printf` instead of `echo` to handle edge case session IDs
+- **Security**: Quote `$ARGUMENTS` in tissue commands to prevent word splitting
+- **Security**: Add error handling for file reads in `scripts/search.py`
+- Documentation: Remove incorrect `oracle/*.md` reference from planner (oracle is read-only)
+- Documentation: Fix agent categorization in architecture.md (separate reviewer/planner roles)
+- Documentation: Remove oracle from artifact writers list in CHANGELOG
+
 ## [0.4.0] - 2025-12-27
 
 ### Added
@@ -19,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Artifact storage moved from `/tmp/trivial/` to `.claude/plugins/trivial/`
-- Each agent writes to its own subdirectory (librarian/, reviewer/, oracle/)
+- Each agent writes to its own subdirectory (librarian/, reviewer/)
 - Added `.claude/plugins/trivial/` subdirectories to .gitignore
 
 ## [0.3.0] - 2025-12-27

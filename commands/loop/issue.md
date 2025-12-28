@@ -22,6 +22,11 @@ Like `/work`, but with iteration - keep trying until the issue is resolved.
 ```bash
 # Inherit or generate session ID
 SID="${TRIVIAL_SESSION_ID:-$(date +%s)-$$}"
+
+# Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
+SID=$(printf '%s' "$SID" | tr -cd 'a-zA-Z0-9_-')
+[[ -z "$SID" ]] && SID="$(date +%s)-$$"
+
 export TRIVIAL_SESSION_ID="$SID"
 STATE_DIR="/tmp/trivial-$SID"
 mkdir -p "$STATE_DIR"
@@ -59,7 +64,7 @@ fi
 Before each retry:
 - `git status` - modified files
 - `git log --oneline -10` - recent commits
-- `tissue show $ARGUMENTS` - re-read the issue
+- `tissue show "$ARGUMENTS"` - re-read the issue
 
 ## Completion
 
@@ -74,8 +79,8 @@ Before each retry:
 ```
 Pause the issue and summarize progress:
 ```bash
-tissue status $ARGUMENTS paused
-tissue comment $ARGUMENTS -m "[issue] Max iterations reached. Progress: ..."
+tissue status "$ARGUMENTS" paused
+tissue comment "$ARGUMENTS" -m "[issue] Max iterations reached. Progress: ..."
 ```
 
 **Stuck** (same error 3 times):

@@ -31,7 +31,6 @@ You help with:
 **Read from** `.claude/plugins/trivial/`:
 - `librarian/*.md` - Librarian findings on external libraries/patterns
 - `reviewer/*.md` - Reviewer findings that may need follow-up issues
-- `oracle/*.md` - Oracle analyses that inform architectural decisions
 
 **Search artifacts** with BM25:
 ```bash
