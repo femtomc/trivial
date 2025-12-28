@@ -47,12 +47,12 @@ if [[ -n "$STATE" ]] && echo "$STATE" | jq -e '.schema' >/dev/null 2>&1; then
         exit 0
     fi
 
-    # Check staleness (2 hour TTL)
+    # Check staleness (2 hour TTL) - use UTC for both timestamps
     UPDATED_AT=$(echo "$STATE" | jq -r '.updated_at // empty')
     if [[ -n "$UPDATED_AT" ]]; then
-        UPDATED_TS=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${UPDATED_AT%Z}" +%s 2>/dev/null || \
-                     date -d "$UPDATED_AT" +%s 2>/dev/null || echo 0)
-        NOW_TS=$(date +%s)
+        UPDATED_TS=$(date -j -u -f "%Y-%m-%dT%H:%M:%S" "${UPDATED_AT%Z}" +%s 2>/dev/null || \
+                     date -u -d "$UPDATED_AT" +%s 2>/dev/null || echo 0)
+        NOW_TS=$(date -u +%s)
         AGE=$((NOW_TS - UPDATED_TS))
         if [[ $AGE -gt 7200 ]]; then
             echo "Warning: Loop state is stale ($AGE seconds old), allowing exit" >&2
@@ -67,6 +67,11 @@ if [[ -n "$STATE" ]] && echo "$STATE" | jq -e '.schema' >/dev/null 2>&1; then
     MAX_ITERATIONS=$(echo "$TOP" | jq -r '.max')
     PROMPT_FILE=$(echo "$TOP" | jq -r '.prompt_file // empty')
     RUN_ID=$(echo "$STATE" | jq -r '.run_id')
+
+    # Worktree context (for issue mode)
+    WORKTREE_PATH=$(echo "$TOP" | jq -r '.worktree_path // empty')
+    BRANCH=$(echo "$TOP" | jq -r '.branch // empty')
+    ISSUE_ID=$(echo "$TOP" | jq -r '.issue_id // empty')
 
     USE_JWZ=true
 else
@@ -218,17 +223,33 @@ else
     ORIGINAL_PROMPT="Continue working on the task."
 fi
 
-# Escape the prompt for JSON
-ESCAPED_PROMPT=$(printf '%s' "$ORIGINAL_PROMPT" | jq -Rs '.')
+# Build worktree context if available
+WORKTREE_CONTEXT=""
+if [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PATH" ]]; then
+    WORKTREE_CONTEXT="
+
+WORKTREE CONTEXT:
+- Working directory: $WORKTREE_PATH
+- Branch: $BRANCH
+- Issue: $ISSUE_ID
+
+IMPORTANT: All file operations must use absolute paths under $WORKTREE_PATH
+- Read/Write/Edit: Use absolute paths like $WORKTREE_PATH/src/file.py
+- Bash commands: Start with cd \"$WORKTREE_PATH\" && ...
+- tissue commands: Run from main repo only (not worktree)"
+fi
 
 # Build continuation message
-CONTINUE_MSG="[ITERATION $NEW_ITERATION/$MAX_ITERATIONS] $ORIGINAL_PROMPT"
+REASON="[ITERATION $NEW_ITERATION/$MAX_ITERATIONS] Continue working on the task. Check your progress and either complete the task or keep iterating.$WORKTREE_CONTEXT"
+
+# Escape for JSON
+ESCAPED_REASON=$(printf '%s' "$REASON" | jq -Rs '.')
 
 # Output block decision (exit code 2 = block)
 cat <<EOF
 {
   "decision": "block",
-  "reason": "[ITERATION $NEW_ITERATION/$MAX_ITERATIONS] Continue working on the task. Check your progress and either complete the task or keep iterating."
+  "reason": $ESCAPED_REASON
 }
 EOF
 

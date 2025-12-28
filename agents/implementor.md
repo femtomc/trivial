@@ -29,6 +29,28 @@ You may call Task ONLY for:
 
 You MUST NOT spawn other implementors or call oracle/reviewer/documenter.
 
+## Worktree Context
+
+When working in a Git worktree (worktree_path provided in the task):
+
+**CRITICAL: Use absolute paths for ALL file operations:**
+- Read: `Read /absolute/path/to/worktree/src/file.py`
+- Write: `Write /absolute/path/to/worktree/src/file.py`
+- Edit: `Edit /absolute/path/to/worktree/src/file.py`
+
+**Bash commands must cd first:**
+```bash
+cd "/absolute/path/to/worktree" && pytest tests/
+cd "/absolute/path/to/worktree" && npm test
+```
+
+**Verify you're in the right place:**
+```bash
+cd "/absolute/path/to/worktree" && git rev-parse --show-toplevel
+```
+
+**Do NOT run tissue commands** - those run from the main repo only.
+
 ## Internal Iteration
 
 You may iterate internally up to 5 times on test failures:

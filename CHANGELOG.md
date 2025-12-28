@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Git worktrees for issues** - Each `/issue` gets its own worktree for clean isolation
+- `/land <id>` command to merge completed issue branches
+- `/worktree` command for worktree management (list, status, remove, prune)
+- Stop hook injects worktree context on each iteration
 - **Implementor agent** - Haiku-based execution agent for code changes, with Opus escalation
 - **Orchestrator pattern** - `/orchestrate` command for context-saving delegation
 - PreToolUse hook enforces orchestrator mode (blocks Write/Edit, redirects to implementor)
@@ -26,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `/issue` creates worktree with branch `trivial/issue/<id>`
+- Loop state includes worktree_path, branch, base_ref
+- Implementor agent updated with worktree instructions (absolute paths, cd prefix)
 - Loop commands (`/loop`, `/issue`, `/grind`) now use jwz for state management
 - `/cancel-loop` posts ABORT event to jwz and cleans up gracefully
 - Removed planner agent in favor of oracle

@@ -24,7 +24,21 @@ Filter examples: `repl`, `epic:slop2-abc`, `priority:1`
 
 This command uses a **Stop hook** to intercept Claude's exit and force re-entry until all issues are processed. Loop state is stored via jwz messaging.
 
-Grind pushes a frame onto the loop stack. When it calls `/issue`, that pushes another frame. When issue completes, its frame is popped and grind continues.
+Grind pushes a frame onto the loop stack. When it calls `/issue`, that pushes another frame (with its own worktree). When issue completes, its frame is popped and grind continues.
+
+## Worktrees
+
+Each issue worked via `/issue` gets its own Git worktree:
+- Worktree: `.worktrees/trivial/<issue-id>/`
+- Branch: `trivial/issue/<issue-id>`
+
+Worktrees persist after grind completes for review. Use `/land <issue-id>` to merge completed issues.
+
+At the end of a grind session, you'll have multiple worktrees ready to land:
+```bash
+/worktree status  # See all worktrees and their status
+/land issue-1     # Land completed issues one by one
+```
 
 ## Setup
 

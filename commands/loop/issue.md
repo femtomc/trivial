@@ -4,7 +4,7 @@ description: Work an issue with iteration (retries on failure)
 
 # Issue Command
 
-Like `/work`, but with iteration - keep trying until the issue is resolved.
+Like `/work`, but with iteration - keep trying until the issue is resolved. Each issue gets its own Git worktree for clean isolation.
 
 ## Usage
 
@@ -19,111 +19,167 @@ Like `/work`, but with iteration - keep trying until the issue is resolved.
 
 ## How It Works
 
-This command uses a **Stop hook** to intercept Claude's exit and force re-entry until the issue is resolved. Loop state is stored via jwz messaging.
+This command:
+1. Creates a Git worktree for the issue (branch: `trivial/issue/<id>`)
+2. Uses a **Stop hook** to intercept exit and force re-entry until resolved
+3. Stores loop state via jwz messaging (including worktree path)
+4. Delegates implementation to the `implementor` agent
 
-When called from `/grind`, this pushes a new frame onto the loop stack. When the issue completes, the frame is popped and grind continues.
+When called from `/grind`, this pushes a new frame onto the loop stack.
 
 ## Setup
 
-Initialize loop state via jwz:
+Initialize worktree and loop state:
 ```bash
-# Generate unique run ID
+# Generate IDs
 RUN_ID="issue-$ARGUMENTS-$(date +%s)"
+ISSUE_ID="$ARGUMENTS"
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Validate issue exists
+if ! tissue show "$ISSUE_ID" >/dev/null 2>&1; then
+    echo "Error: Issue $ISSUE_ID not found"
+    exit 1
+fi
+
+# Change to repo root for git operations
+cd "$REPO_ROOT"
 
 # Ensure jwz is initialized
 [ ! -d .jwz ] && jwz init
 
+# Resolve base ref (config > origin/HEAD > main > master > HEAD)
+BASE_REF=$(git config trivial.baseRef 2>/dev/null || \
+           git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/||' || \
+           (git show-ref --verify refs/heads/main >/dev/null 2>&1 && echo main) || \
+           (git show-ref --verify refs/heads/master >/dev/null 2>&1 && echo master) || \
+           echo HEAD)
+
+# Sanitize issue ID for branch name
+SAFE_ID=$(printf '%s' "$ISSUE_ID" | tr -cd 'a-zA-Z0-9_-')
+if [[ -z "$SAFE_ID" ]]; then
+    echo "Error: Issue ID '$ISSUE_ID' contains no valid characters"
+    exit 1
+fi
+BRANCH="trivial/issue/$SAFE_ID"
+WORKTREE_PATH="$REPO_ROOT/.worktrees/trivial/$SAFE_ID"
+
+# Ensure .worktrees/ is gitignored
+if ! grep -q '^\.worktrees/' "$REPO_ROOT/.gitignore" 2>/dev/null; then
+    echo ".worktrees/" >> "$REPO_ROOT/.gitignore"
+fi
+
+# Check if worktree already exists
+if git worktree list | grep -qF "$WORKTREE_PATH"; then
+    echo "Reusing existing worktree at $WORKTREE_PATH"
+else
+    # Create worktree with new branch
+    mkdir -p "$(dirname "$WORKTREE_PATH")"
+    git worktree add -b "$BRANCH" "$WORKTREE_PATH" "$BASE_REF" 2>/dev/null || \
+    git worktree add "$WORKTREE_PATH" "$BRANCH"  # Branch already exists
+fi
+
 # Create temp directory for prompt file
 STATE_DIR="/tmp/trivial-$RUN_ID"
 mkdir -p "$STATE_DIR"
-
-# Store issue context as prompt
-tissue show "$ARGUMENTS" > "$STATE_DIR/prompt.txt"
+tissue show "$ISSUE_ID" > "$STATE_DIR/prompt.txt"
 
 # Check if we're nested inside grind (existing stack)
 EXISTING=$(jwz read "loop:current" 2>/dev/null | tail -1 || echo '{"stack":[]}')
 EXISTING_STACK=$(echo "$EXISTING" | jq -c '.stack // []')
 PARENT_RUN_ID=$(echo "$EXISTING" | jq -r '.run_id // empty')
-
-# Use parent run_id if nested, otherwise our own
 ACTIVE_RUN_ID="${PARENT_RUN_ID:-$RUN_ID}"
 
-# Push new frame onto stack
+# Push new frame onto stack (includes worktree info)
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-NEW_FRAME="{\"id\":\"$RUN_ID\",\"mode\":\"issue\",\"iter\":1,\"max\":10,\"prompt_file\":\"$STATE_DIR/prompt.txt\",\"issue_id\":\"$ARGUMENTS\"}"
+NEW_FRAME=$(jq -n \
+    --arg id "$RUN_ID" \
+    --arg issue_id "$ISSUE_ID" \
+    --arg prompt_file "$STATE_DIR/prompt.txt" \
+    --arg worktree_path "$WORKTREE_PATH" \
+    --arg branch "$BRANCH" \
+    --arg base_ref "$BASE_REF" \
+    '{
+        id: $id,
+        mode: "issue",
+        iter: 1,
+        max: 10,
+        prompt_file: $prompt_file,
+        issue_id: $issue_id,
+        worktree_path: $worktree_path,
+        branch: $branch,
+        base_ref: $base_ref
+    }')
 NEW_STACK=$(echo "$EXISTING_STACK" | jq --argjson frame "$NEW_FRAME" '. + [$frame]')
 
 jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$ACTIVE_RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":$NEW_STACK}"
 
-# Create/announce on issue topic
-jwz topic new "issue:$ARGUMENTS" 2>/dev/null || true
-jwz post "issue:$ARGUMENTS" -m "[issue] STARTED: Beginning work on issue"
+# Announce on issue topic
+jwz topic new "issue:$ISSUE_ID" 2>/dev/null || true
+jwz post "issue:$ISSUE_ID" -m "[issue] STARTED: Working in $WORKTREE_PATH on branch $BRANCH"
 ```
+
+## Worktree Context
+
+All file operations must use the worktree path:
+- **Read/Write/Edit**: Use absolute paths under `$WORKTREE_PATH`
+- **Bash**: Prefix commands with `cd "$WORKTREE_PATH" && ...`
+- **tissue commands**: Run from main repo (not worktree)
+
+The stop hook injects worktree context on each iteration.
 
 ## Workflow
 
-Run `/work $ARGUMENTS` with these additions:
-
-1. **On failure**: Increment iteration count, analyze, retry
-2. **On stuck**: After 3 similar failures, pause and escalate
-3. **On success**: Output `<loop-done>COMPLETE</loop-done>`
-4. **On max iterations**: Stop and report
+1. Read the issue: `tissue show "$ISSUE_ID"`
+2. Delegate to implementor with worktree context
+3. On failure: analyze, retry (stop hook re-injects)
+4. On success: output `<loop-done>COMPLETE</loop-done>`
+5. Land with `/land $ISSUE_ID` when ready
 
 ## Iteration Tracking
 
-The stop hook increments the iteration counter automatically. Check current iteration:
+The stop hook increments iteration automatically. Check current:
 ```bash
 jwz read "loop:current" | tail -1 | jq -r '.stack[-1].iter'
 ```
 
 ## Messaging
 
-Post status updates during issue work:
-
 ```bash
-# On iteration start
+# On iteration
 ITER=$(jwz read "loop:current" | tail -1 | jq -r '.stack[-1].iter')
-jwz post "issue:$ARGUMENTS" -m "[issue] ITERATION $ITER: Retrying after failure"
-
-# On stuck
-jwz post "issue:$ARGUMENTS" -m "[issue] STUCK: Same error 3 times - needs help"
+jwz post "issue:$ISSUE_ID" -m "[issue] ITERATION $ITER: Retrying after failure"
 
 # On complete
-jwz post "issue:$ARGUMENTS" -m "[issue] COMPLETE: Issue resolved"
+jwz post "issue:$ISSUE_ID" -m "[issue] COMPLETE: Ready to land"
 ```
-
-## Iteration Context
-
-Before each retry:
-- `git status` - modified files
-- `git log --oneline -10` - recent commits
-- `tissue show "$ARGUMENTS"` - re-read the issue
 
 ## Completion
 
-**Success** (review passes, issue closed):
+**Success**:
 ```
 <loop-done>COMPLETE</loop-done>
 ```
+The worktree remains for review. Use `/land $ISSUE_ID` to merge.
 
 **Max iterations**:
 ```
 <loop-done>MAX_ITERATIONS</loop-done>
 ```
-Pause the issue and summarize progress:
+Pause the issue:
 ```bash
-tissue status "$ARGUMENTS" paused
-tissue comment "$ARGUMENTS" -m "[issue] Max iterations reached. Progress: ..."
+tissue status "$ISSUE_ID" paused
+tissue comment "$ISSUE_ID" -m "[issue] Max iterations. Worktree at $WORKTREE_PATH"
 ```
 
-**Stuck** (same error 3 times):
+**Stuck**:
 ```
 <loop-done>STUCK</loop-done>
 ```
-Pause and describe the specific blocker.
+Pause and describe the blocker.
 
 ## Cleanup
 
-The stop hook handles stack management. When this issue completes:
-- If nested in grind: frame is popped, grind continues
-- If standalone: loop state is cleared
+The worktree persists after completion for review. To clean up:
+- `/land $ISSUE_ID` - Merge and remove worktree
+- `/worktree remove $ISSUE_ID` - Remove without merging

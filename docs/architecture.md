@@ -49,11 +49,13 @@ trivial/
 │   │   ├── message.md
 │   │   ├── review.md
 │   │   ├── test.md
-│   │   └── work.md
+│   │   ├── work.md
+│   │   └── worktree.md
 │   └── loop/
 │       ├── cancel-loop.md
 │       ├── grind.md
 │       ├── issue.md
+│       ├── land.md
 │       ├── loop.md
 │       └── orchestrate.md
 ├── hooks/               # Claude Code hooks
@@ -224,6 +226,50 @@ If you get stuck in an infinite loop:
 1. `/cancel-loop` - Graceful cancellation via command
 2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
 3. `rm -rf .jwz/` - Manual reset of all messaging state
+
+## Git Worktrees
+
+Each issue worked via `/issue` or `/grind` gets its own Git worktree for clean isolation.
+
+### Structure
+
+```
+main repo/                          .worktrees/trivial/
+├── src/                            ├── auth-123/     ← issue worktree
+├── .tissue/                        │   └── (branch: trivial/issue/auth-123)
+├── .worktrees/ (gitignored)        └── perf-456/     ← another issue
+└── ...                                 └── (branch: trivial/issue/perf-456)
+```
+
+### Lifecycle
+
+1. **Create**: `/issue <id>` creates worktree at `.worktrees/trivial/<id>/`
+2. **Work**: Implementor uses absolute paths, Bash commands cd to worktree
+3. **Complete**: Worktree persists for review after issue completes
+4. **Land**: `/land <id>` merges branch to main and cleans up
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/issue <id>` | Create worktree and work issue |
+| `/land <id>` | Merge worktree branch to main |
+| `/worktree list` | Show all trivial worktrees |
+| `/worktree status` | Show worktree dirty/clean status |
+| `/worktree remove <id>` | Remove worktree without merging |
+| `/worktree prune` | Clean up orphaned worktrees |
+
+### Stop Hook Integration
+
+The stop hook injects worktree context on each iteration:
+```
+WORKTREE CONTEXT:
+- Working directory: /path/to/.worktrees/trivial/auth-123
+- Branch: trivial/issue/auth-123
+- Issue: auth-123
+
+IMPORTANT: All file operations must use absolute paths under /path/to/.worktrees/trivial/auth-123
+```
 
 ## Hooks Philosophy
 
