@@ -11,10 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Implementor agent** - Haiku-based execution agent for code changes, with Opus escalation
+- **Orchestrator pattern** - `/orchestrate` command for context-saving delegation
+- PreToolUse hook enforces orchestrator mode (blocks Write/Edit, redirects to implementor)
 - **Stop hook for loop commands** - Self-referential iteration via Claude Code hooks
 - **PreToolUse hook** - Safety guardrails blocking destructive git/bash commands
 - **PreCompact hook** - Recovery anchor persisted to `loop:anchor` before compaction
-- `hooks/hooks.json` and hook scripts for loop, safety, and recovery
+- `hooks/hooks.json` and hook scripts for loop, safety, orchestration, and recovery
 - Loop state stored via jwz messaging (`loop:current` topic) with JSON schema
 - Stack-based nested loop model (grind → issue)
 - TTL-based staleness detection (2 hour timeout prevents zombie loops)

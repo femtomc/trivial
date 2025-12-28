@@ -1,6 +1,5 @@
 #!/bin/bash
-# trivial PreToolUse hook - safety guardrails for destructive operations
-# Stateless pattern matching only - no workflow enforcement
+# trivial PreToolUse hook - safety guardrails and orchestrator mode enforcement
 
 set -e
 
@@ -10,8 +9,40 @@ INPUT=$(cat)
 # Extract tool info
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input // empty')
+CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-# Only check Bash commands
+# Change to project directory for jwz access
+if [[ -n "$CWD" ]]; then
+    cd "$CWD"
+fi
+
+#############################################
+# ORCHESTRATOR MODE ENFORCEMENT
+#############################################
+
+# Check if we're in orchestrator mode (only if jwz is available)
+if command -v jwz >/dev/null 2>&1 && [[ -d .jwz ]]; then
+    MODE_MSG=$(jwz read "mode:current" 2>/dev/null | tail -1 || true)
+    MODE=$(echo "$MODE_MSG" | jq -r '.mode // empty' 2>/dev/null || true)
+
+    if [[ "$MODE" == "orchestrator" ]]; then
+        # Block Write and Edit in orchestrator mode
+        if [[ "$TOOL_NAME" == "Write" ]] || [[ "$TOOL_NAME" == "Edit" ]]; then
+            cat <<EOF
+{
+  "decision": "block",
+  "reason": "ORCHESTRATOR MODE: You are orchestrating, not implementing. Delegate code changes to the implementor agent using: Task tool with subagent_type='trivial:implementor'"
+}
+EOF
+            exit 0
+        fi
+    fi
+fi
+
+#############################################
+# SAFETY GUARDRAILS (Bash only)
+#############################################
+
 if [[ "$TOOL_NAME" != "Bash" ]]; then
     exit 0
 fi

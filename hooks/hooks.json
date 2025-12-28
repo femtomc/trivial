@@ -1,5 +1,5 @@
 {
-  "description": "trivial plugin hooks - loops, safety, and recovery",
+  "description": "trivial plugin hooks - loops, safety, orchestration, and recovery",
   "hooks": {
     "Stop": [
       {
@@ -9,7 +9,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Write|Edit",
         "hooks": [
           {
             "type": "command",

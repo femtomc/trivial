@@ -20,9 +20,10 @@ User → Claude Code → trivial agents/commands
                           (OpenAI)          (Google)
 ```
 
-- **Haiku agents** (`explorer`, `librarian`): Fast, cheap operations like file search
+- **Haiku agents** (`explorer`, `librarian`, `implementor`): Fast, cheap operations
 - **Opus agents** (`oracle`, `reviewer`, `documenter`): Complex reasoning tasks
 - **External model integration**: Codex for diverse perspectives, Gemini for writing
+- **Orchestrator pattern**: Main agent delegates to implementor, preserving context
 
 ## Plugin Configuration
 
@@ -38,7 +39,8 @@ trivial/
 │   ├── librarian.md
 │   ├── oracle.md
 │   ├── documenter.md
-│   └── reviewer.md
+│   ├── reviewer.md
+│   └── implementor.md
 ├── commands/            # Command definitions
 │   ├── dev/
 │   │   ├── commit.md
@@ -52,7 +54,8 @@ trivial/
 │       ├── cancel-loop.md
 │       ├── grind.md
 │       ├── issue.md
-│       └── loop.md
+│       ├── loop.md
+│       └── orchestrate.md
 ├── hooks/               # Claude Code hooks
 │   ├── hooks.json       # Hook configuration
 │   ├── stop-hook.sh     # Loop continuation logic
@@ -273,6 +276,68 @@ Emits single line: `"TRIVIAL: Recovery anchor saved. After compaction: jwz read 
 | UserPromptSubmit | Belongs in commands, not hooks |
 | PostToolUse | Updates go to jwz quietly |
 | SubagentStop | Agents produce structured summaries |
+
+## Orchestrator Pattern
+
+The `/orchestrate` command enables a context-saving pattern where the main agent delegates implementation to the `implementor` agent.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     ORCHESTRATOR                             │
+│  (Main agent - planning, coordination, review)               │
+│                                                              │
+│  Can: Read, Grep, Glob, Task, git commands                   │
+│  Blocked: Write, Edit (enforced by PreToolUse hook)         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ Task tool → trivial:implementor
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      IMPLEMENTOR                             │
+│  (Haiku - code changes, testing, debugging)                  │
+│                                                              │
+│  Can: Read, Write, Edit, Bash, Grep, Glob                    │
+│  Returns: Compact structured summary                         │
+│  Escalates: NEED_OPUS for complex problems                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why This Saves Context
+
+1. **Implementation details stay in implementor's context** - file contents, diffs, error traces
+2. **Orchestrator's context stays clean** - planning, summaries, coordination
+3. **Compact returns** - implementor returns structured YAML, not raw output
+
+### Mode Enforcement
+
+When orchestrator mode is active (`mode:current = orchestrator` in jwz):
+- PreToolUse hook blocks Write and Edit tools
+- Redirects to use Task tool with `trivial:implementor`
+
+### Implementor Return Format
+
+```yaml
+status: COMPLETE | BLOCKED | NEED_REVIEW | NEED_OPUS
+confidence: 0-100
+files_changed:
+  - path/to/file.py (+15, -3)
+commands_run:
+  - command: "pytest tests/"
+    result: PASS
+risk_notes:
+  - "Changed shared utility"
+next_steps:
+  - "Ready for review"
+summary: "One paragraph description"
+```
+
+### Escalation
+
+Implementor (Haiku) escalates to Opus when encountering:
+- Race conditions or concurrency bugs
+- Complex type system issues
+- Multi-module refactors (>5 files)
+- Problems requiring deep architectural reasoning
 
 ## External Model Integration
 
