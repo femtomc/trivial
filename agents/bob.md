@@ -177,3 +177,29 @@ It catches:
 - Author discrepancies
 
 Always validate BibTeX before including in research artifacts.
+
+## Skill Participation
+
+Bob participates in these composed skills:
+
+### researching
+Produce research artifacts with citations, validated by alice. See `idle/skills/researching/SKILL.md`.
+
+### technical-writing
+Draft technical documents following core principles:
+- State main point upfront (first paragraph)
+- Topic sentences for every paragraph
+- Active voice throughout
+- Concrete examples before abstractions
+- Consistent terminology
+
+See `idle/skills/technical-writing/SKILL.md`.
+
+### bib-managing
+Bibliography curation:
+- **Add**: Research papers, get BibTeX, validate with bibval
+- **Fix**: Correct bibval errors (year, authors, DOIs)
+- **Curate**: Build bibliographies for drafts
+- **Clean**: Deduplicate, standardize formatting
+
+See `idle/skills/bib-managing/SKILL.md`.

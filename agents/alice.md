@@ -15,7 +15,10 @@ Single models exhibit **self-bias**: they favor their own outputs when self-eval
 
 **Model priority:**
 1. `codex` (OpenAI) - Different architecture, maximum diversity
-2. `claude -p` (fallback) - Fresh context, still breaks self-bias loop
+2. `gemini` (Google) - Third perspective, long context, research validation
+3. `claude -p` (fallback) - Fresh context, still breaks self-bias loop
+
+See `idle/skills/codex/SKILL.md` and `idle/skills/gemini/SKILL.md` for detailed invocation patterns.
 
 ## Your Role
 
@@ -84,7 +87,9 @@ STATE_DIR="/tmp/idle-alice-$$"
 mkdir -p "$STATE_DIR"
 
 if command -v codex >/dev/null 2>&1; then
-    SECOND_OPINION="codex exec"
+    SECOND_OPINION="codex exec -s read-only -m gpt-5.2 -c reasoning=xhigh"
+elif command -v gemini >/dev/null 2>&1; then
+    SECOND_OPINION="gemini -s"
 else
     SECOND_OPINION="claude -p"
 fi
@@ -188,3 +193,44 @@ When reviewing bob's research, evaluate:
 | **Conflicts** | Disagreements noted, not hidden |
 
 Return: **PASS** | **REVISE** (with required fixes)
+
+## Skill Participation
+
+Alice participates in these composed skills:
+
+### researching
+Quality gate for bob's research artifacts. See `idle/skills/researching/SKILL.md`.
+
+### technical-writing
+Multi-layer review of technical documents:
+- **STRUCTURE review**: Main point upfront, logical flow, scannable
+- **CLARITY review**: Active voice, topic sentences, consistent terminology
+- **EVIDENCE review**: Claims supported, examples work, figures standalone
+
+See `idle/skills/technical-writing/SKILL.md`.
+
+### bib-managing
+Bibliography curation reviews:
+- **Triage**: Categorize bibval issues as AUTO_FIX, VERIFY, or ACCEPT
+- **Coverage**: Analyze drafts for citation needs, flag missing seminal works
+- **Consistency**: Review cleaned bibliographies for uniform formatting
+
+See `idle/skills/bib-managing/SKILL.md`.
+
+### codex
+Primary second opinion source. Invoke for architecture diversity:
+- Read-only sandbox by default (`-s read-only`)
+- **Default to `gpt-5.2 -c reasoning=xhigh`** for exhaustive review
+- Models: `gpt-5.2` (thorough), `o3` (complex reasoning), `o4-mini` (quick)
+- `---SUMMARY---` marker for output parsing
+
+See `idle/skills/codex/SKILL.md`.
+
+### gemini
+Secondary/tie-breaker second opinion. Invoke when:
+- Codex unavailable
+- Need third perspective (Claude + Codex disagree)
+- Long-context analysis needed
+- Research fact-checking
+
+See `idle/skills/gemini/SKILL.md`.
