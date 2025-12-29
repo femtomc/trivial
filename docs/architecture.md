@@ -48,7 +48,7 @@ User → Claude Code → idle agents/commands
 
 The idle architecture is moving towards a hybrid model:
 
-- **Plugin**: Embedded in Claude Code. Provides slash commands (/loop, /issue, /grind), hooks (Stop hook for loop continuation), and agent dispatch.
+- **Plugin**: Embedded in Claude Code. Provides slash commands (/loop, /cancel), hooks (Stop hook for loop continuation), and agent dispatch.
 - **Controller** (future): Separate binary. Provides `idle status` for observability, `idle tui` for interactive control. Reads state from jwz.
 - **jwz**: The shared state layer. Both plugin and controller read/write to jwz topics (loop:current, loop:anchor, etc.).
 - This separation allows external tools to observe and control loops without being inside Claude Code.
@@ -98,22 +98,16 @@ idle/
 │   ├── oracle.md
 │   ├── documenter.md
 │   └── reviewer.md
-├── commands/            # Command definitions
-│   ├── dev/
-│   │   ├── commit.md
-│   │   ├── document.md
-│   │   ├── fmt.md
-│   │   ├── message.md
-│   │   ├── review.md
-│   │   ├── test.md
-│   │   ├── work.md
-│   │   └── worktree.md
-│   └── loop/
-│       ├── cancel-loop.md
-│       ├── grind.md
-│       ├── issue.md
-│       ├── land.md
-│       └── loop.md
+├── commands/            # Explicit user-invoked commands
+│   ├── cancel.md        # Cancel active loop
+│   └── loop.md          # Universal loop (task mode + issue mode)
+├── skills/              # Auto-discovered capabilities
+│   ├── commit/SKILL.md
+│   ├── document/SKILL.md
+│   ├── fmt/SKILL.md
+│   ├── message/SKILL.md
+│   ├── review/SKILL.md
+│   └── test/SKILL.md
 ├── hooks/               # Claude Code hooks
 │   ├── hooks.json       # Hook configuration
 │   ├── stop-hook.sh     # Loop continuation logic
@@ -209,7 +203,7 @@ Commands are user-invocable via `/idle:dev:command` or `/idle:loop:command`.
 
 ## Loop State Management
 
-Loop commands (`/loop`, `/grind`, `/issue`) use a **Stop hook** to intercept Claude's exit and force re-entry until the task is complete.
+The `/loop` command uses a **Stop hook** to intercept Claude's exit and force re-entry until the task is complete. It operates in two modes: task mode (with args) and issue mode (without args, works through issue tracker with auto-land).
 
 ### How It Works
 
@@ -268,24 +262,21 @@ Key design choices:
 
 Commands emit structured signals that the stop hook detects:
 
-- `<loop-done>COMPLETE</loop-done>` - Task finished successfully
+- `<loop-done>COMPLETE</loop-done>` - Task finished successfully (auto-lands in issue mode)
 - `<loop-done>MAX_ITERATIONS</loop-done>` - Hit iteration limit
 - `<loop-done>STUCK</loop-done>` - No progress, needs user input
-- `<issue-complete>DONE</issue-complete>` - Single issue finished
-- `<grind-done>NO_MORE_ISSUES</grind-done>` - Backlog cleared
-- `<grind-done>MAX_ISSUES</grind-done>` - Session limit reached
 
 ### Escape Hatches
 
 If you get stuck in an infinite loop:
 
-1. `/cancel-loop` - Graceful cancellation via command
+1. `/cancel` - Graceful cancellation via command
 2. `IDLE_LOOP_DISABLE=1 claude` - Environment variable bypass
 3. `rm -rf .jwz/` - Manual reset of all messaging state
 
 ## Git Worktrees
 
-Each issue worked via `/issue` or `/grind` gets its own Git worktree for clean isolation.
+In issue mode, `/loop` creates a Git worktree for each issue to enable clean isolation.
 
 ### Structure
 
@@ -299,7 +290,8 @@ main repo/                          .worktrees/idle/
 
 ### Lifecycle
 
-1. **Create** (`/issue <id>`):
+1. **Create** (`/loop` without args):
+   - Picks first ready issue from `tissue ready`
    - Creates worktree at `.worktrees/idle/<id>/`
    - Creates branch `idle/issue/<id>` from base ref
    - Stores worktree path in jwz loop state
@@ -310,35 +302,26 @@ main repo/                          .worktrees/idle/
    - All file operations use absolute paths under worktree
    - tissue commands run from main repo (not worktree)
 
-3. **Complete**:
-   - Issue emits `<issue-complete>DONE</issue-complete>`
-   - Worktree PERSISTS for review (not auto-deleted)
-   - User can inspect changes before landing
-
-4. **Land** (`/land <id>`):
-   - Validates worktree is clean
-   - Attempts fast-forward merge to main
-   - Removes worktree and branch on success
+3. **Complete & Auto-Land**:
+   - Agent emits `<loop-done>COMPLETE</loop-done>`
+   - Stop hook verifies review requirements (reads from jwz)
+   - Auto-lands: fast-forward merge to main, push, cleanup worktree
    - Updates tissue status to closed
+   - Picks next issue automatically
 
-5. **Remove** (`/worktree remove <id>`):
-   - Removes worktree without merging
-   - Use for abandoned work or when changes already landed
-
-6. **Prune** (`/worktree prune`):
-   - Cleans up orphaned worktrees (directory deleted but git still tracks)
-   - Handles case-insensitive filesystem collisions
+4. **Cleanup** (manual, if needed):
+   ```bash
+   git worktree prune      # Clean up orphaned worktrees
+   git worktree list       # Check current worktrees
+   ```
 
 ### Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/issue <id>` | Create worktree and work issue |
-| `/land <id>` | Merge worktree branch to main |
-| `/worktree list` | Show all idle worktrees |
-| `/worktree status` | Show worktree dirty/clean status |
-| `/worktree remove <id>` | Remove worktree without merging |
-| `/worktree prune` | Clean up orphaned worktrees |
+| `/loop` | Pick issue, create worktree, work, auto-land, repeat |
+| `/loop <task>` | Task mode (no worktree, simple iteration) |
+| `/cancel` | Cancel active loop |
 
 ### Stop Hook Integration
 
@@ -595,7 +578,7 @@ The command becomes available as `/idle:category:your-command`.
 
 ### Required
 
-- [tissue](https://github.com/femtomc/tissue) - Local issue tracker for `/work`, `/grind`, `/issue`
+- [tissue](https://github.com/femtomc/tissue) - Local issue tracker for `/loop` issue mode
 - [zawinski](https://github.com/femtomc/zawinski) - Async messaging for agent communication
 - [uv](https://github.com/astral-sh/uv) - Python package runner for `scripts/search.py`
 - [gh](https://cli.github.com/) - GitHub CLI for librarian agent

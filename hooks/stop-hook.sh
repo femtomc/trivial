@@ -207,8 +207,9 @@ if [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
     # Check for completion signals based on mode
     # Only match completion markers at the start of a line (not indented or in code blocks)
     # Use grep with ^ anchor to reject indented markers in code blocks
+    # Unified signal: <loop-done>COMPLETE|MAX_ITERATIONS|STUCK</loop-done>
     case "$MODE" in
-        loop)
+        task|loop)  # "loop" is legacy, "task" is new
             if printf '%s' "$LAST_MESSAGE" | grep -qE '^<loop-done>COMPLETE</loop-done>$'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="COMPLETE"
@@ -230,53 +231,23 @@ if [[ -n "$TRANSCRIPT_PATH" ]] && [[ -f "$TRANSCRIPT_PATH" ]]; then
             elif printf '%s' "$LAST_MESSAGE" | grep -qE '^<loop-done>STUCK</loop-done>$'; then
                 COMPLETION_FOUND=true
                 COMPLETION_REASON="STUCK"
-            elif printf '%s' "$LAST_MESSAGE" | grep -qE '^<issue-complete>DONE</issue-complete>$'; then
-                COMPLETION_FOUND=true
-                COMPLETION_REASON="COMPLETE"
             fi
-            ;;
-        grind)
-            if printf '%s' "$LAST_MESSAGE" | grep -qE '^<grind-done>NO_MORE_ISSUES</grind-done>$'; then
-                COMPLETION_FOUND=true
-                COMPLETION_REASON="NO_MORE_ISSUES"
-            elif printf '%s' "$LAST_MESSAGE" | grep -qE '^<grind-done>MAX_ISSUES</grind-done>$'; then
-                COMPLETION_FOUND=true
-                COMPLETION_REASON="MAX_ISSUES"
-            fi
-            # For grind, <issue-complete> means pop issue frame, not exit grind
             ;;
     esac
 fi
 
 # If completion signal found, verify review requirements before allowing exit
 if [[ "$COMPLETION_FOUND" == "true" ]]; then
-    # REVIEW GATE: For issue/grind with COMPLETE, verify review was done
-    # NOTE: Review gate only applies when using jwz (worktrees require jwz)
+    # REVIEW GATE: For issue mode with COMPLETE, verify review was done
+    # Read review status from jwz messages on the issue topic
     REVIEW_REQUIRED=false
     REVIEW_PASSED=true
     REVIEW_ESCALATE=false
 
-    if [[ "$USE_JWZ" == "true" ]] && [[ "$COMPLETION_REASON" == "COMPLETE" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PATH" ]]; then
+    if [[ "$USE_JWZ" == "true" ]] && [[ "$COMPLETION_REASON" == "COMPLETE" ]] && [[ -n "$ISSUE_ID" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PATH" ]]; then
         REVIEW_REQUIRED=true
 
-        # Re-read state with lock to avoid race conditions
-        if acquire_lock; then
-            STATE=$(jwz read "loop:current" 2>/dev/null | tail -1 || true)
-            TOP=$(echo "$STATE" | jq -r '.stack[-1]')
-            release_lock
-        fi
-
-        # Get review tracking state from fresh TOP
-        LAST_REVIEWED_SHA=$(echo "$TOP" | jq -r '.last_reviewed_sha // empty')
-        REVIEW_ITER=$(echo "$TOP" | jq -r '.review_iter // 0')
-        LAST_REVIEW_STATUS=$(echo "$TOP" | jq -r '.last_review_status // empty')
-
-        # Validate REVIEW_ITER is numeric
-        if ! [[ "$REVIEW_ITER" =~ ^[0-9]+$ ]]; then
-            REVIEW_ITER=0
-        fi
-
-        # Get current HEAD (handle failure gracefully)
+        # Get current HEAD
         CURRENT_SHA=$(git -C "$WORKTREE_PATH" rev-parse HEAD 2>/dev/null || echo "")
         if [[ -z "$CURRENT_SHA" ]]; then
             REVIEW_PASSED=false
@@ -290,38 +261,48 @@ if [[ "$COMPLETION_FOUND" == "true" ]]; then
             HAS_CHANGES=true
         fi
 
-        # Determine if review gate passes (explicit LGTM required)
         if [[ -n "$CURRENT_SHA" ]]; then
             if [[ "$HAS_CHANGES" == "true" ]]; then
-                # Uncommitted changes = cannot complete
                 REVIEW_PASSED=false
                 REVIEW_BLOCK_REASON="Uncommitted changes exist. Commit and run /review before completing."
-            elif [[ -z "$LAST_REVIEWED_SHA" ]]; then
-                # Never reviewed = cannot complete
-                REVIEW_PASSED=false
-                REVIEW_BLOCK_REASON="Code has not been reviewed. Run /review before completing."
-            elif [[ "$CURRENT_SHA" != "$LAST_REVIEWED_SHA" ]]; then
-                # Commits after review = cannot complete
-                REVIEW_PASSED=false
-                REVIEW_BLOCK_REASON="Commits made after last review. Run /review before completing."
-            elif [[ "$LAST_REVIEW_STATUS" != "LGTM" ]]; then
-                # Require explicit LGTM (not just absence of CHANGES_REQUESTED)
-                if [[ "$LAST_REVIEW_STATUS" == "CHANGES_REQUESTED" ]]; then
-                    if [[ "$REVIEW_ITER" -ge 3 ]]; then
-                        # Max review iterations reached - allow completion but require follow-up issues
+            else
+                # Read review status from jwz messages
+                # Look for latest [review] message on issue topic
+                REVIEW_MESSAGES=$(jwz read "issue:$ISSUE_ID" 2>/dev/null | grep '\[review\]' || true)
+                LATEST_REVIEW=$(echo "$REVIEW_MESSAGES" | tail -1)
+
+                if [[ -z "$LATEST_REVIEW" ]]; then
+                    REVIEW_PASSED=false
+                    REVIEW_BLOCK_REASON="Code has not been reviewed. Run /review before completing."
+                else
+                    # Parse review verdict and SHA from message
+                    # Format: [review] LGTM sha:abc123 or [review] CHANGES_REQUESTED sha:abc123
+                    REVIEW_STATUS=$(echo "$LATEST_REVIEW" | grep -oE '\[review\] (LGTM|CHANGES_REQUESTED)' | awk '{print $2}')
+                    REVIEW_SHA=$(echo "$LATEST_REVIEW" | grep -oE 'sha:[a-f0-9]+' | cut -d: -f2)
+
+                    # Count review iterations
+                    REVIEW_ITER=$(echo "$REVIEW_MESSAGES" | wc -l | tr -d ' ')
+
+                    if [[ -z "$REVIEW_SHA" ]] || [[ "$CURRENT_SHA" != "$REVIEW_SHA"* ]]; then
+                        # Commits after review
+                        REVIEW_PASSED=false
+                        REVIEW_BLOCK_REASON="Commits made after last review. Run /review before completing."
+                    elif [[ "$REVIEW_STATUS" == "LGTM" ]]; then
                         REVIEW_PASSED=true
-                        REVIEW_ESCALATE=true
+                    elif [[ "$REVIEW_STATUS" == "CHANGES_REQUESTED" ]]; then
+                        if [[ "$REVIEW_ITER" -ge 3 ]]; then
+                            REVIEW_PASSED=true
+                            REVIEW_ESCALATE=true
+                        else
+                            REVIEW_PASSED=false
+                            REVIEW_BLOCK_REASON="Last review requested changes. Address feedback and run /review again. (Review iteration $REVIEW_ITER/3)"
+                        fi
                     else
                         REVIEW_PASSED=false
-                        REVIEW_BLOCK_REASON="Last review requested changes. Address feedback and run /review again. (Review iteration $REVIEW_ITER/3)"
+                        REVIEW_BLOCK_REASON="Review status unclear. Run /review to get explicit LGTM."
                     fi
-                else
-                    # Unknown or empty status - require explicit LGTM
-                    REVIEW_PASSED=false
-                    REVIEW_BLOCK_REASON="Review status unclear (got: '$LAST_REVIEW_STATUS'). Run /review to get explicit LGTM."
                 fi
             fi
-            # If none of the above triggered, REVIEW_PASSED remains true (LGTM at current SHA)
         fi
     fi
 
@@ -386,6 +367,182 @@ EOF
     fi
 
     emit_trace_event "COMPLETION" "{\"reason\":\"$COMPLETION_REASON\"}"
+
+    # AUTO-LAND for issue mode with COMPLETE
+    AUTO_LAND_SUCCESS=false
+    if [[ "$MODE" == "issue" ]] && [[ "$COMPLETION_REASON" == "COMPLETE" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PATH" ]]; then
+        emit_trace_event "AUTO_LAND_START" "{\"issue_id\":\"$ISSUE_ID\",\"branch\":\"$BRANCH\"}"
+
+        # Derive main repo root from worktree path (worktrees are at REPO/.worktrees/idle/ID)
+        # WORKTREE_PATH format: /path/to/repo/.worktrees/idle/<issue-id>
+        MAIN_REPO=$(echo "$WORKTREE_PATH" | sed 's|/\.worktrees/idle/[^/]*$||')
+        BASE_REF=$(echo "$TOP" | jq -r '.base_ref // "main"')
+
+        if [[ -n "$MAIN_REPO" ]] && [[ -d "$MAIN_REPO/.git" ]]; then
+            # Verify worktree is clean
+            if git -C "$WORKTREE_PATH" diff --quiet 2>/dev/null && \
+               git -C "$WORKTREE_PATH" diff --cached --quiet 2>/dev/null; then
+
+                # Fetch from main repo
+                git -C "$MAIN_REPO" fetch origin 2>/dev/null || true
+
+                # Check if main repo has uncommitted changes
+                MAIN_DIRTY=false
+                if ! git -C "$MAIN_REPO" diff --quiet 2>/dev/null || \
+                   ! git -C "$MAIN_REPO" diff --cached --quiet 2>/dev/null; then
+                    MAIN_DIRTY=true
+                    # Stash main repo changes
+                    STASH_RESULT=$(git -C "$MAIN_REPO" stash push -m "idle-auto-land-$$" 2>&1)
+                    STASH_CREATED=false
+                    if [[ "$STASH_RESULT" != *"No local changes"* ]]; then
+                        STASH_CREATED=true
+                    fi
+                fi
+
+                # Attempt fast-forward merge from main repo (not worktree)
+                # Use -C to run commands in main repo context
+                if git -C "$MAIN_REPO" merge --ff-only "$BRANCH" 2>/dev/null; then
+                    # Push to remote
+                    if git -C "$MAIN_REPO" push origin "$BASE_REF" 2>/dev/null; then
+                        # Clean up worktree and branch
+                        git -C "$MAIN_REPO" worktree remove "$WORKTREE_PATH" 2>/dev/null || true
+                        git -C "$MAIN_REPO" branch -d "$BRANCH" 2>/dev/null || true
+
+                        # Update tissue
+                        tissue status "$ISSUE_ID" closed 2>/dev/null || true
+                        tissue comment "$ISSUE_ID" -m "[loop] Merged to $BASE_REF and cleaned up" 2>/dev/null || true
+
+                        # Post to jwz
+                        jwz post "issue:$ISSUE_ID" -m "[loop] LANDED: Merged to $BASE_REF" 2>/dev/null || true
+                        jwz post "project:$(basename "$MAIN_REPO")" -m "[loop] Issue $ISSUE_ID landed" 2>/dev/null || true
+
+                        AUTO_LAND_SUCCESS=true
+                        emit_trace_event "AUTO_LAND_SUCCESS" "{\"issue_id\":\"$ISSUE_ID\"}"
+                    else
+                        emit_trace_event "AUTO_LAND_PUSH_FAILED" "{\"issue_id\":\"$ISSUE_ID\"}"
+                    fi
+                else
+                    # Fast-forward failed - need rebase
+                    emit_trace_event "AUTO_LAND_FF_FAILED" "{\"issue_id\":\"$ISSUE_ID\"}"
+                    jwz post "issue:$ISSUE_ID" -m "[loop] AUTO_LAND_FAILED: Cannot fast-forward. Rebase needed." 2>/dev/null || true
+                fi
+
+                # Restore stashed changes if we stashed
+                if [[ "${STASH_CREATED:-false}" == "true" ]]; then
+                    git -C "$MAIN_REPO" stash pop -q 2>/dev/null || true
+                fi
+            else
+                emit_trace_event "AUTO_LAND_DIRTY" "{\"issue_id\":\"$ISSUE_ID\"}"
+                jwz post "issue:$ISSUE_ID" -m "[loop] AUTO_LAND_FAILED: Worktree has uncommitted changes" 2>/dev/null || true
+            fi
+        fi
+    fi
+
+    # PICK-NEXT-ISSUE for issue mode after successful landing
+    NEXT_ISSUE_FOUND=false
+    if [[ "$MODE" == "issue" ]] && [[ "$AUTO_LAND_SUCCESS" == "true" ]]; then
+        # Check for next ready issue
+        NEXT_ISSUE_ID=$(tissue ready --format=id 2>/dev/null | head -1 || true)
+
+        if [[ -n "$NEXT_ISSUE_ID" ]]; then
+            emit_trace_event "PICK_NEXT_ISSUE" "{\"next_issue_id\":\"$NEXT_ISSUE_ID\"}"
+            NEXT_ISSUE_FOUND=true
+
+            # Set up next issue (similar to loop.md setup)
+            REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+            NEW_RUN_ID="loop-$(date +%s)-$$"
+
+            # Resolve base ref
+            BASE_REF=$(git config idle.baseRef 2>/dev/null || true)
+            if [[ -z "$BASE_REF" ]]; then
+                BASE_REF=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || true)
+            fi
+            if [[ -z "$BASE_REF" ]] && git show-ref --verify refs/heads/main >/dev/null 2>&1; then
+                BASE_REF="main"
+            fi
+            if [[ -z "$BASE_REF" ]] && git show-ref --verify refs/heads/master >/dev/null 2>&1; then
+                BASE_REF="master"
+            fi
+            if [[ -z "$BASE_REF" ]]; then
+                BASE_REF="HEAD"
+            fi
+
+            # Create worktree for next issue
+            SAFE_ID=$(printf '%s' "$NEXT_ISSUE_ID" | tr -cd 'a-zA-Z0-9_-')
+            NEW_BRANCH="idle/issue/$SAFE_ID"
+            NEW_WORKTREE_PATH="$REPO_ROOT/.worktrees/idle/$SAFE_ID"
+
+            if git worktree list | grep -qF "$NEW_WORKTREE_PATH"; then
+                # Reuse existing
+                true
+            else
+                mkdir -p "$(dirname "$NEW_WORKTREE_PATH")"
+                git worktree add -b "$NEW_BRANCH" "$NEW_WORKTREE_PATH" "$BASE_REF" 2>/dev/null || \
+                git worktree add "$NEW_WORKTREE_PATH" "$NEW_BRANCH" 2>/dev/null || true
+
+                # Initialize submodules
+                if [[ -f "$REPO_ROOT/.gitmodules" ]]; then
+                    git -C "$NEW_WORKTREE_PATH" submodule update --init --recursive 2>/dev/null || true
+                fi
+            fi
+
+            # Create prompt from issue
+            STATE_DIR="/tmp/idle-$NEW_RUN_ID"
+            mkdir -p "$STATE_DIR"
+            tissue show "$NEXT_ISSUE_ID" > "$STATE_DIR/prompt.txt" 2>/dev/null || true
+
+            # Update state with new issue frame
+            NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            NEW_FRAME=$(jq -n \
+                --arg id "$NEW_RUN_ID" \
+                --arg issue_id "$NEXT_ISSUE_ID" \
+                --arg prompt_file "$STATE_DIR/prompt.txt" \
+                --arg worktree_path "$NEW_WORKTREE_PATH" \
+                --arg branch "$NEW_BRANCH" \
+                --arg base_ref "$BASE_REF" \
+                '{
+                    id: $id,
+                    mode: "issue",
+                    iter: 1,
+                    max: 10,
+                    prompt_file: $prompt_file,
+                    issue_id: $issue_id,
+                    worktree_path: $worktree_path,
+                    branch: $branch,
+                    base_ref: $base_ref
+                }')
+
+            if acquire_lock; then
+                jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$NEW_RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":[$NEW_FRAME]}"
+                release_lock
+            fi
+
+            jwz topic new "issue:$NEXT_ISSUE_ID" 2>/dev/null || true
+            jwz post "issue:$NEXT_ISSUE_ID" -m "[loop] STARTED: Working in $NEW_WORKTREE_PATH" 2>/dev/null || true
+
+            # Continue loop with next issue
+            NEXT_PROMPT=$(cat "$STATE_DIR/prompt.txt" 2>/dev/null || echo "Work on issue $NEXT_ISSUE_ID")
+            REASON="[NEXT ISSUE] Picked $NEXT_ISSUE_ID from tracker. Starting fresh iteration.
+
+WORKTREE: $NEW_WORKTREE_PATH
+BRANCH: $NEW_BRANCH
+ISSUE: $NEXT_ISSUE_ID
+
+$NEXT_PROMPT"
+
+            ESCAPED_REASON=$(printf '%s' "$REASON" | jq -Rs '.')
+            cat <<EOF
+{
+  "decision": "block",
+  "reason": $ESCAPED_REASON
+}
+EOF
+            exit 2
+        else
+            emit_trace_event "NO_MORE_ISSUES" "{}"
+        fi
+    fi
+
     if [[ "$USE_JWZ" == "true" ]]; then
         # Acquire lock before modifying state
         if acquire_lock; then
@@ -400,8 +557,6 @@ EOF
                 # Pop frame, continue outer loop
                 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
                 jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":$NEW_STACK}"
-                # Don't exit - let outer loop continue
-                # Actually, for now we allow exit and let the outer loop re-invoke
             fi
             release_lock
         fi
@@ -460,9 +615,6 @@ IMPORTANT: All file operations must use absolute paths under $WORKTREE_PATH
 - Bash commands: Start with cd \"$WORKTREE_PATH\" && ...
 - tissue commands: Run from main repo only (not worktree)"
 
-    # Derive phase from git state
-    LAST_REVIEWED_SHA=$(echo "$TOP" | jq -r '.last_reviewed_sha // empty')
-
     # Check for uncommitted changes
     HAS_CHANGES=false
     if ! git -C "$WORKTREE_PATH" diff --quiet 2>/dev/null || \
@@ -472,27 +624,43 @@ IMPORTANT: All file operations must use absolute paths under $WORKTREE_PATH
 
     CURRENT_SHA=$(git -C "$WORKTREE_PATH" rev-parse HEAD 2>/dev/null || echo "")
 
+    # Derive phase from jwz review messages
+    LAST_REVIEW_SHA=""
+    LAST_REVIEW_STATUS=""
+    if [[ -n "$ISSUE_ID" ]]; then
+        LATEST_REVIEW=$(jwz read "issue:$ISSUE_ID" 2>/dev/null | grep '\[review\]' | tail -1 || true)
+        if [[ -n "$LATEST_REVIEW" ]]; then
+            LAST_REVIEW_SHA=$(echo "$LATEST_REVIEW" | grep -oE 'sha:[a-f0-9]+' | cut -d: -f2)
+            LAST_REVIEW_STATUS=$(echo "$LATEST_REVIEW" | grep -oE '\[review\] (LGTM|CHANGES_REQUESTED)' | awk '{print $2}')
+        fi
+    fi
+
     if [[ "$HAS_CHANGES" == "true" ]]; then
         PHASE="implement"
         PHASE_CONTEXT="
 PHASE: implement
 ACTION: Changes pending. When implementation complete, run /review before marking done."
-    elif [[ -z "$LAST_REVIEWED_SHA" ]] || [[ "$CURRENT_SHA" != "$LAST_REVIEWED_SHA" ]]; then
+    elif [[ -z "$LAST_REVIEW_SHA" ]] || [[ "$CURRENT_SHA" != "$LAST_REVIEW_SHA"* ]]; then
         PHASE="review_pending"
         PHASE_CONTEXT="
 PHASE: review_pending
-ACTION REQUIRED: Run /review before emitting <issue-complete>DONE</issue-complete>"
+ACTION REQUIRED: Run /review before emitting <loop-done>COMPLETE</loop-done>"
+    elif [[ "$LAST_REVIEW_STATUS" == "CHANGES_REQUESTED" ]]; then
+        PHASE="changes_requested"
+        PHASE_CONTEXT="
+PHASE: changes_requested
+ACTION: Address review feedback, commit changes, then run /review again."
     else
         PHASE="reviewed"
         PHASE_CONTEXT="
 PHASE: reviewed
-STATUS: Changes reviewed. Ready to complete if implementation is done."
+STATUS: Changes reviewed (LGTM). Ready to complete."
     fi
 
     # Add agent awareness
     PHASE_CONTEXT="$PHASE_CONTEXT
 
-AGENTS: If stuck on a design decision, consult idle:oracle. After changes, use /review or idle:reviewer."
+AGENTS: If stuck on a design decision, consult idle:oracle. After changes, use /review."
 fi
 
 # Build continuation message

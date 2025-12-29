@@ -74,7 +74,7 @@ See `agents/explorer.md` for a simple example or `agents/oracle.md` for a comple
 
 4. The command becomes available as `/idle:<category>:your-command`
 
-See `commands/dev/fmt.md` for a simple example or `commands/loop/grind.md` for a complex one.
+See `skills/fmt/SKILL.md` for a simple skill example or `commands/loop.md` for the main loop command.
 
 ## Code Style
 

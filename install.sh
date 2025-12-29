@@ -201,8 +201,8 @@ main() {
     printf "\n"
     printf "  ${BLUE}tissue init${NC}      # Initialize issue tracker\n"
     printf "  ${BLUE}jwz init${NC}         # Initialize messaging\n"
-    printf "  ${BLUE}/grind${NC}           # Work through issues\n"
-    printf "  ${BLUE}/review${NC}          # Code review\n"
+    printf "  ${BLUE}/loop${NC}            # Work through issues (or /loop <task>)\n"
+    printf "  ${BLUE}/cancel${NC}          # Cancel active loop\n"
     printf "\n"
     printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 }

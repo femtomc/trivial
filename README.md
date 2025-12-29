@@ -58,24 +58,23 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 ### Dev Commands
 
-| Command | Description |
-|---------|-------------|
-| `/work` | Pick an issue and work it to completion |
-| `/fmt` | Auto-detect and run project formatter |
-| `/test` | Auto-detect and run project tests |
-| `/review` | Run code review via reviewer agent |
-| `/document` | Write technical docs via documenter agent |
-| `/commit` | Commit staged changes with generated message |
+These capabilities are auto-discovered by Claude based on context:
+
+| Skill | Description |
+|-------|-------------|
+| `fmt` | Auto-detect and run project formatter |
+| `test` | Auto-detect and run project tests |
+| `review` | Run code review via reviewer agent |
+| `document` | Write technical docs via documenter agent |
+| `commit` | Commit staged changes with generated message |
+| `message` | Post/read jwz messages for agent coordination |
 
 ### Loop Commands
 
 | Command | Description |
 |---------|-------------|
-| `/loop <task>` | Iterative loop until task is complete |
-| `/grind [filter]` | Continuously work through issue tracker |
-| `/issue <id>` | Work on a specific tissue issue |
-| `/land <id>` | Merge a completed issue worktree |
-| `/cancel-loop` | Cancel the active loop |
+| `/loop [task]` | Universal iteration loop. With args: iterate on task. Without args: work through issue tracker (auto-lands, picks next) |
+| `/cancel` | Cancel the active loop |
 
 ## Worktrees
 
@@ -84,16 +83,16 @@ idle uses git worktrees to enable parallel work. Each issue gets its own isolate
 - **Isolation:** Changes happen in `.worktrees/idle/<issue-id>/`
 - **Parallelism:** You can have multiple agents working on different issues simultaneously
 - **Workflow:**
-    1. `/issue <id>` creates/switches to a worktree
-    2. Agents work in that directory
-    3. `/land <id>` merges changes back to main and removes the worktree
-    4. `/worktree` command helps manage orphaned trees
+    1. `/loop` (without args) picks an issue and creates a worktree
+    2. Agent works in that directory
+    3. On completion, auto-lands (merges to main, cleans up worktree)
+    4. Loop automatically picks next issue
 
 ## Requirements
 
 ### Required
 
-- [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/work`, `/grind`, `/issue`)
+- [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/loop` issue mode)
 - [zawinski](https://github.com/femtomc/zawinski) - Async messaging (for agent communication)
 - [uv](https://github.com/astral-sh/uv) - Python package runner (for `scripts/search.py`)
 - [gh](https://cli.github.com/) - GitHub CLI (for librarian agent)
@@ -110,18 +109,10 @@ When these are not installed, agents fall back to `claude -p` for second opinion
 A typical workflow with idle:
 
 ```shell
-# 1. Plan your work
+# Work through your issue backlog (picks issues, auto-lands, repeats)
+/loop
 
-# 2. Work an issue (runs test, fmt, review, commit automatically)
-/issue auth-1abc2def
-
-# 3. Or grind through your backlog
-/grind priority:1
-```
-
-For ad-hoc tasks without an issue tracker:
-
-```shell
+# Or iterate on a specific task
 /loop Add input validation to all API endpoints
 ```
 
@@ -135,14 +126,14 @@ tissue new "Add user authentication" -p 1 -t feature
 tissue new "Fix login redirect bug" -p 1 -t bug
 tissue new "Refactor database queries" -p 2 -t tech-debt
 
-# Grind through P1 issues automatically
-/grind priority:1
-# → Works idle-abc123 (authentication)
-# → Works idle-def456 (login bug)
-# → Reports: 2 issues completed, 1 remaining
+# Work through issues automatically
+/loop
+# → Picks first ready issue, creates worktree
+# → Works on it, runs review, auto-lands on completion
+# → Picks next issue, repeats until backlog empty
 ```
 
-### Iterate without an issue tracker
+### Iterate on a specific task
 
 ```shell
 # Use /loop for ad-hoc iterative tasks
@@ -194,7 +185,7 @@ Install the tissue issue tracker:
 cargo install --git https://github.com/femtomc/tissue tissue
 ```
 
-Required for: `/work`, `/grind`, `/issue`
+Required for: `/loop` (issue mode)
 
 ### jwz: command not found
 
@@ -232,11 +223,12 @@ npm install -g @google/gemini-cli
 
 ### No issues found
 
-If `/work` or `/grind` reports no issues:
+If `/loop` (without args) reports no issues:
 
 1. Ensure you're in a directory with a `.tissue` folder
 2. Run `tissue list` to see available issues
-3. Run `tissue init` to create a new issue tracker
+3. Run `tissue ready` to see issues ready to work (no blockers)
+4. Run `tissue init` to create a new issue tracker
 
 ### Zombie loops
 
@@ -262,8 +254,8 @@ Case-insensitive filesystem collisions on macOS/Windows.
 
 **Fix:**
 ```shell
-/worktree prune         # Via idle
-git worktree prune      # Or directly
+git worktree prune      # Clean up orphaned worktrees
+git worktree list       # Check current worktrees
 ```
 
 ## License

@@ -2,7 +2,7 @@
 description: Cancel the active loop
 ---
 
-# Cancel Loop
+# Cancel Command
 
 Stop the current iteration loop gracefully.
 
@@ -61,7 +61,7 @@ Stop the current iteration loop gracefully.
 
 ## Alternative Escape Methods
 
-If `/cancel-loop` doesn't work:
+If `/cancel` doesn't work:
 
 1. **Environment variable**: Start new session with loops disabled:
    ```bash
