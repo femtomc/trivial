@@ -1,6 +1,6 @@
 # idle
 
-**An opinionated outer harness for Claude Code.** Long-running loops, multi-model consensus, message passing.
+**An opinionated outer harness for Claude Code.** Long-running loops, multi-model consensus, memory notes via local issue tracker and mail for agents.
 
 `idle` is a (very) opinionated plugin for Claude Code (CC) that overloads several of CC's native points of extension (subagents, hooks, etc) so that one may usefully use
 CC for long running, open ended tasks.
