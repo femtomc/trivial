@@ -1,5 +1,5 @@
 ---
-name: codex
+name: querying-codex
 description: Invoke OpenAI Codex CLI for second opinions, code review, and reasoning from a different architecture. Prioritized by alice for maximum model diversity.
 ---
 

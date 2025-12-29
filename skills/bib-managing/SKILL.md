@@ -80,32 +80,8 @@ Match agent cost to task complexity:
 User wants to cite a paper. bob finds proper BibTeX, validates, adds to file.
 
 ```
-User: "Add Vaswani et al. 2017 attention paper"
-                │
-                ▼
-        bob (WebSearch)
-        Find paper, get BibTeX
-                │
-                ▼
-        bob (bibval -k <key>)
-        Validate the new entry
-                │
-         ┌──────┴──────┐
-         │             │
-       PASS          ERROR
-         │             │
-         ▼             ▼
-    bob (append)   bob (fix entry)
-    Add to .bib         │
-         │             ▼
-         ▼        bibval (retry)
-       DONE            │
-                 ┌─────┴─────┐
-                 │           │
-               PASS       ERROR
-                 │           │
-                 ▼           ▼
-            bob (append)  NEEDS_INPUT
+bob (search) → bob (bibval) → PASS → append → DONE
+                           └→ ERROR → bob (fix) → bibval → PASS/NEEDS_INPUT
 ```
 
 ### Step 1: Research (bob)
@@ -160,41 +136,8 @@ Status: VALIDATED"
 Run bibval on existing references.bib, bob fixes issues.
 
 ```
-User: "Validate my references.bib"
-                │
-                ▼
-        bibval references.bib
-                │
-         ┌──────┴──────┐
-         │             │
-       CLEAN      ERRORS/WARNINGS
-         │             │
-         ▼             ▼
-       DONE      alice (triage)
-                 Categorize issues
-                       │
-                       ▼
-                 bob (fix, iter 1)
-                       │
-                       ▼
-                    bibval
-                       │
-                ┌──────┴──────┐
-                │             │
-              CLEAN     STILL_ERRORS
-                │             │
-                ▼             ▼
-              DONE      bob (fix, iter 2)
-                              │
-                              ▼
-                           bibval
-                              │
-                       ┌──────┴──────┐
-                       │             │
-                     CLEAN      STILL_ERRORS
-                       │             │
-                       ▼             ▼
-                     DONE      NEEDS_INPUT
+bibval → CLEAN → DONE
+      └→ ERRORS → alice (triage) → bob (fix) → bibval → [repeat max 2x] → DONE/NEEDS_INPUT
 ```
 
 ### Step 1: Initial Validation
@@ -257,39 +200,9 @@ Status: CLEAN|NEEDS_INPUT"
 Given a draft, identify what needs citing and build bibliography.
 
 ```
-User: "Build bibliography for draft.md"
-                │
-                ▼
-        alice (analyze draft)
-        Identify claims needing citations
-                │
-                ▼
-        alice (check coverage)
-        Flag missing seminal works
-                │
-                ▼
-        bob (research each)
-        Find BibTeX for each need
-                │
-                ▼
-        bob (build references.bib)
-        Compile and validate
-                │
-                ▼
-             bibval
-                │
-         ┌──────┴──────┐
-         │             │
-       CLEAN        ERRORS
-         │             │
-         ▼             ▼
-  alice (final)   bob (fix, 1x)
-  Coverage OK?         │
-         │             ▼
-         ▼          bibval
-  PASS / REVISE        │
-                       ▼
-                 alice (final)
+alice (analyze) → alice (coverage) → bob (research) → bob (build) → bibval
+    → CLEAN → alice (final review) → PASS/REVISE
+    → ERRORS → bob (fix, 1x) → bibval → alice (final)
 ```
 
 ### Step 1: Analyze Document (alice)
@@ -359,33 +272,7 @@ Gaps: <list or 'none'>"
 Deduplicate, standardize formatting, fill missing DOIs.
 
 ```
-User: "Clean up references.bib"
-                │
-                ▼
-        bob (automated dedup)
-        Exact key/DOI matches
-                │
-                ▼
-        bob (fuzzy dedup)
-        Similar titles - decide keep/merge
-                │
-                ▼
-        bob (standardize)
-        Consistent keys, venues
-                │
-                ▼
-        bob (fill DOIs)
-        Search for missing DOIs
-                │
-                ▼
-             bibval
-                │
-                ▼
-        alice (consistency)
-        Key style, venue format
-                │
-                ▼
-         PASS / REVISE
+bob (dedup) → bob (fuzzy dedup) → bob (standardize) → bob (fill DOIs) → bibval → alice (consistency) → PASS/REVISE
 ```
 
 ### Step 1: Automated Deduplication (bob)

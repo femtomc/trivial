@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-29
+
+### Changed
+
+- **Skills aligned with Claude best practices** (per platform.claude.com/docs)
+- Renamed `codex` skill to `querying-codex` (gerund naming convention)
+- Renamed `gemini` skill to `querying-gemini` (gerund naming convention)
+- Condensed ASCII workflow diagrams in `bib-managing` skill (505→392 lines)
+
+### Added
+
+- Per-skill `references.bib` files tracking design rationale sources
+  - `technical-writing/references.bib` - Strunk & White, Pinker, Peyton Jones, etc.
+  - `researching/references.bib` - Self-Refine, quality gate patterns
+  - `bib-managing/references.bib` - DBLP, CrossRef, Semantic Scholar
+  - `querying-codex/references.bib` - LLM self-bias, multi-agent debate
+  - `querying-gemini/references.bib` - Multi-model consensus
+  - `messaging/references.bib` - Enterprise Integration Patterns
+
+## [1.1.0] - 2025-12-28
+
+### Added
+
+- `technical-writing` skill with multi-layer review (STRUCTURE/CLARITY/EVIDENCE)
+- `bib-managing` skill for bibliography curation with bibval
+- `codex` skill for OpenAI Codex CLI second opinions
+- `gemini` skill for Google Gemini CLI third perspectives
+
+## [1.0.0] - 2025-12-27
+
+### Added
+
+- Initial stable release with bob/alice agents and core skills
+
 ## [0.7.0] - 2025-12-27
 
 ### Changed

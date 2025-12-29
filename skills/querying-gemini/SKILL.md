@@ -1,5 +1,5 @@
 ---
-name: gemini
+name: querying-gemini
 description: Invoke Google Gemini CLI for second opinions, research, and reasoning. Offers different perspective from both Claude and Codex for maximum diversity.
 ---
 
