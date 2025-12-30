@@ -84,7 +84,7 @@ STATE_FILE=".claude/idle-loop.local.md"
 
 # Try to read loop state from jwz first
 STATE=""
-if command -v jwz >/dev/null 2>&1 && [[ -d .jwz ]]; then
+if command -v jwz >/dev/null 2>&1 && [[ -d .zawinski ]]; then
     # Acquire lock before reading jwz state
     if acquire_lock; then
         # Get the latest message from loop:current topic

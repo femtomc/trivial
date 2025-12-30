@@ -68,7 +68,7 @@ pub const StackFrame = struct {
     mode: Mode,
     iter: u32,
     max: u32,
-    prompt_file: []const u8,
+    prompt_blob: []const u8,
     // issue mode fields
     issue_id: ?[]const u8 = null,
     worktree_path: ?[]const u8 = null,
@@ -271,7 +271,7 @@ test "State: idle when stack empty" {
 test "State: aborted on ABORT event" {
     var sm = StateMachine.init(std.testing.allocator);
     var frames = [_]StackFrame{
-        .{ .id = "test", .mode = .loop, .iter = 1, .max = 10, .prompt_file = "/tmp/p.txt" },
+        .{ .id = "test", .mode = .loop, .iter = 1, .max = 10, .prompt_blob = "sha256:abc" },
     };
     var state = LoopState{
         .schema = 0,
@@ -288,7 +288,7 @@ test "State: aborted on ABORT event" {
 test "State: stuck when stale (>2 hours)" {
     var sm = StateMachine.init(std.testing.allocator);
     var frames = [_]StackFrame{
-        .{ .id = "test", .mode = .loop, .iter = 1, .max = 10, .prompt_file = "/tmp/p.txt" },
+        .{ .id = "test", .mode = .loop, .iter = 1, .max = 10, .prompt_blob = "sha256:abc" },
     };
     var state = LoopState{
         .schema = 0,
@@ -306,7 +306,7 @@ test "State: stuck when stale (>2 hours)" {
 test "State: stuck when max iterations reached" {
     var sm = StateMachine.init(std.testing.allocator);
     var frames = [_]StackFrame{
-        .{ .id = "test", .mode = .loop, .iter = 10, .max = 10, .prompt_file = "/tmp/p.txt" },
+        .{ .id = "test", .mode = .loop, .iter = 10, .max = 10, .prompt_blob = "sha256:abc" },
     };
     var state = LoopState{
         .schema = 0,
@@ -324,7 +324,7 @@ test "State: stuck when max iterations reached" {
 test "State: completing when signal detected" {
     var sm = StateMachine.init(std.testing.allocator);
     var frames = [_]StackFrame{
-        .{ .id = "test", .mode = .loop, .iter = 3, .max = 10, .prompt_file = "/tmp/p.txt" },
+        .{ .id = "test", .mode = .loop, .iter = 3, .max = 10, .prompt_blob = "sha256:abc" },
     };
     var state = LoopState{
         .schema = 0,
@@ -342,7 +342,7 @@ test "State: completing when signal detected" {
 test "State: active when no signal, increments iteration" {
     var sm = StateMachine.init(std.testing.allocator);
     var frames = [_]StackFrame{
-        .{ .id = "test", .mode = .loop, .iter = 3, .max = 10, .prompt_file = "/tmp/p.txt" },
+        .{ .id = "test", .mode = .loop, .iter = 3, .max = 10, .prompt_blob = "sha256:abc" },
     };
     var state = LoopState{
         .schema = 0,

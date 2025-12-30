@@ -14,7 +14,7 @@ if [[ -n "$CWD" ]]; then
 fi
 
 # Only proceed if jwz is available and initialized
-if ! command -v jwz >/dev/null 2>&1 || [[ ! -d .jwz ]]; then
+if ! command -v jwz >/dev/null 2>&1 || [[ ! -d .zawinski ]]; then
     exit 0
 fi
 

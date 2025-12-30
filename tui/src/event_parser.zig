@@ -166,7 +166,7 @@ fn parseStack(allocator: std.mem.Allocator, json_str: []const u8, stack: *std.Ar
         const mode = sm.Mode.fromString(mode_str) orelse .loop;
         const iter = extractNumber(obj_str, "\"iter\"") orelse 0;
         const max = extractNumber(obj_str, "\"max\"") orelse 10;
-        const prompt_file = extractString(obj_str, "\"prompt_file\"") orelse "";
+        const prompt_blob = extractString(obj_str, "\"prompt_blob\"") orelse "";
 
         // Optional fields
         const issue_id = extractString(obj_str, "\"issue_id\"");
@@ -180,7 +180,7 @@ fn parseStack(allocator: std.mem.Allocator, json_str: []const u8, stack: *std.Ar
             .mode = mode,
             .iter = @intCast(iter),
             .max = @intCast(max),
-            .prompt_file = prompt_file,
+            .prompt_blob = prompt_blob,
             .issue_id = issue_id,
             .worktree_path = worktree_path,
             .branch = branch,
@@ -312,7 +312,7 @@ test "extractNumber: basic" {
 
 test "parseEvent: simple loop state" {
     const json =
-        \\{"schema":0,"event":"STATE","run_id":"loop-123","updated_at":"2024-12-21T10:00:00Z","stack":[{"id":"loop-123","mode":"loop","iter":3,"max":10,"prompt_file":"/tmp/p.txt"}]}
+        \\{"schema":2,"event":"STATE","run_id":"loop-123","updated_at":"2024-12-21T10:00:00Z","stack":[{"id":"loop-123","mode":"loop","iter":3,"max":10,"prompt_blob":"sha256:abc"}]}
     ;
 
     var parsed = try parseEvent(std.testing.allocator, json);
@@ -320,7 +320,7 @@ test "parseEvent: simple loop state" {
     defer parsed.?.deinit();
 
     const state = parsed.?.state;
-    try std.testing.expectEqual(@as(u32, 0), state.schema);
+    try std.testing.expectEqual(@as(u32, 2), state.schema);
     try std.testing.expectEqual(sm.EventType.STATE, state.event);
     try std.testing.expectEqualStrings("loop-123", state.run_id);
     try std.testing.expectEqual(@as(usize, 1), state.stack.len);
@@ -362,7 +362,7 @@ test "parseEvent: ABORT event" {
 
 test "parseEvent: nested grind/issue stack" {
     const json =
-        \\{"schema":0,"event":"STATE","run_id":"grind-123","updated_at":"2024-12-21T10:00:00Z","stack":[{"id":"grind-123","mode":"grind","iter":2,"max":100,"prompt_file":"/tmp/g.txt","filter":"priority:1"},{"id":"issue-456","mode":"issue","iter":1,"max":10,"prompt_file":"/tmp/i.txt","issue_id":"auth-123","worktree_path":"/path/to/wt","branch":"idle/issue/auth-123"}]}
+        \\{"schema":2,"event":"STATE","run_id":"grind-123","updated_at":"2024-12-21T10:00:00Z","stack":[{"id":"grind-123","mode":"grind","iter":2,"max":100,"prompt_blob":"sha256:abc","filter":"priority:1"},{"id":"issue-456","mode":"issue","iter":1,"max":10,"prompt_blob":"sha256:def","issue_id":"auth-123","worktree_path":"/path/to/wt","branch":"idle/issue/auth-123"}]}
     ;
 
     var parsed = try parseEvent(std.testing.allocator, json);

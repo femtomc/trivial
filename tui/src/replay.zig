@@ -165,7 +165,7 @@ fn simulateState(trace: TraceEvent) sm.LoopState {
         .mode = sm.Mode.fromString(trace.loop_kind) orelse .loop,
         .iter = trace.iteration,
         .max = trace.max,
-        .prompt_file = "",
+        .prompt_blob = "",
     };
 
     // Use a static array for the stack
