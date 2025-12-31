@@ -108,11 +108,16 @@ jobs:
                   grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || echo ""
           }
 
-          # Get installed version
+          # Get installed version (tries both 'version' and '--version')
           get_installed_version() {
               cmd=$1
               if command -v "$cmd" >/dev/null 2>&1; then
-                  $cmd version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo ""
+                  # Try 'version' first, then '--version'
+                  ver=$($cmd version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+                  if [ -z "$ver" ]; then
+                      ver=$($cmd --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+                  fi
+                  echo "$ver"
               else
                   echo ""
               fi
