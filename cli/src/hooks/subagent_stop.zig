@@ -16,11 +16,14 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     const cwd = extractJsonString(input_json, "\"cwd\"") orelse ".";
     std.posix.chdir(cwd) catch {};
 
+    // Extract the subagent's task
+    const task_prompt = extractJsonString(input_json, "\"prompt\"");
+
     // Count issues BEFORE alice review
     const issues_before = countOpenAliceReviewIssues(allocator);
 
     // Invoke alice for review
-    invokeAlice(allocator);
+    invokeAlice(allocator, task_prompt);
 
     // Count issues AFTER alice review
     const issues_after = countOpenAliceReviewIssues(allocator);
@@ -49,19 +52,20 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     return 0;
 }
 
-fn invokeAlice(allocator: std.mem.Allocator) void {
-    const alice_prompt =
-        \\You are alice, an adversarial reviewer. Review the work done by this subagent.
+fn invokeAlice(allocator: std.mem.Allocator, task_prompt: ?[]const u8) void {
+    var prompt_buf: [8192]u8 = undefined;
+    const alice_prompt = std.fmt.bufPrint(&prompt_buf,
+        \\You are alice, an adversarial reviewer.
         \\
-        \\Your job: find problems. Assume there are bugs until proven otherwise.
+        \\The subagent's task was: {s}
         \\
-        \\For each problem found, create a tissue issue:
-        \\  tissue new "<problem description>" -t alice-review -p <1-3>
+        \\Review the work. Find problems. Use `tissue` to check what was done.
         \\
-        \\Priority: 1=critical, 2=important, 3=minor
+        \\For each problem, create an issue:
+        \\  tissue new "<problem>" -t alice-review -p <1-3>
         \\
-        \\If you find no problems, create no issues.
-    ;
+        \\If no problems, create no issues.
+    , .{task_prompt orelse "(unknown)"}) catch return;
 
     var child = std.process.Child.init(&.{ "claude", "-p", alice_prompt }, allocator);
     _ = child.spawnAndWait() catch return;
