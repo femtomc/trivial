@@ -28,15 +28,26 @@ ALICE_TOPIC="alice:status:$SESSION_ID"
 # --- Check 1: Has alice posted a COMPLETE decision? ---
 
 ALICE_DECISION=""
+ALICE_MSG_ID=""
+ALICE_SUMMARY=""
 if command -v jwz &>/dev/null; then
-    LATEST_MSG=$(jwz read "$ALICE_TOPIC" --json 2>/dev/null | jq -r '.[-1].body // ""' || echo "")
-    if [[ -n "$LATEST_MSG" ]]; then
-        ALICE_DECISION=$(echo "$LATEST_MSG" | jq -r '.decision // ""' 2>/dev/null || echo "")
+    LATEST_RAW=$(jwz read "$ALICE_TOPIC" --json 2>/dev/null | jq '.[-1] // empty' || echo "")
+    if [[ -n "$LATEST_RAW" ]]; then
+        ALICE_MSG_ID=$(echo "$LATEST_RAW" | jq -r '.id // ""')
+        LATEST_BODY=$(echo "$LATEST_RAW" | jq -r '.body // ""')
+        if [[ -n "$LATEST_BODY" ]]; then
+            ALICE_DECISION=$(echo "$LATEST_BODY" | jq -r '.decision // ""' 2>/dev/null || echo "")
+            ALICE_SUMMARY=$(echo "$LATEST_BODY" | jq -r '.summary // ""' 2>/dev/null || echo "")
+        fi
     fi
 fi
 
 if [[ "$ALICE_DECISION" == "COMPLETE" || "$ALICE_DECISION" == "APPROVED" ]]; then
-    echo '{"decision": "approve", "reason": "alice approved"}'
+    # Include alice's message ID and summary in approval
+    REASON="alice approved"
+    [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON (msg: $ALICE_MSG_ID)"
+    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON - $ALICE_SUMMARY"
+    echo "{\"decision\": \"approve\", \"reason\": \"$REASON\"}"
     exit 0
 fi
 
@@ -49,10 +60,13 @@ fi
 
 if [[ "$OPEN_ISSUES" -gt 0 ]]; then
     ISSUE_LIST=$(tissue list --tag alice-review --status open 2>/dev/null || echo "")
+    REASON="There are $OPEN_ISSUES open alice-review issue(s). Address them before exiting:\\n$ISSUE_LIST\\n\\nClose issues with: tissue status <id> closed"
+    [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON\\n\\nalice review: $ALICE_MSG_ID"
+    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON\\nalice said: $ALICE_SUMMARY"
     cat <<EOF
 {
   "decision": "block",
-  "reason": "There are $OPEN_ISSUES open alice-review issue(s). Address them before exiting:\n$ISSUE_LIST\n\nClose issues with: tissue status <id> closed"
+  "reason": "$REASON"
 }
 EOF
     exit 0
@@ -61,10 +75,13 @@ fi
 # --- Check 3: alice said ISSUES but they're now closed - re-review ---
 
 if [[ "$ALICE_DECISION" == "ISSUES" ]]; then
+    REASON="Previous alice issues resolved. Run /alice again for re-review before exiting."
+    [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON (previous review: $ALICE_MSG_ID)"
+    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON\\n\\nalice said: $ALICE_SUMMARY"
     cat <<EOF
 {
   "decision": "block",
-  "reason": "Previous alice issues resolved. Run /alice again for re-review before exiting."
+  "reason": "$REASON"
 }
 EOF
     exit 0
@@ -72,10 +89,13 @@ fi
 
 # --- Check 4: No alice review yet - request one ---
 
+USER_CONTEXT_TOPIC="user:context:$SESSION_ID"
+REASON="No alice review on record. Run /alice to get review approval before exiting.\\n\\nAlice will review your work and post issues to tissue if problems are found.\\n\\nUser context available at: $USER_CONTEXT_TOPIC\\nRead with: jwz read $USER_CONTEXT_TOPIC --json"
+
 cat <<EOF
 {
   "decision": "block",
-  "reason": "No alice review on record. Run /alice to get review approval before exiting. Alice will review your work and post issues to tissue if problems are found."
+  "reason": "$REASON"
 }
 EOF
 exit 0
