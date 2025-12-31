@@ -88,7 +88,7 @@ Iterate on a task until complete.
 /loop Refactor the authentication module
 ```
 
-- **Max iterations**: 10
+- **Max iterations**: 50
 - **Checkpoint reviews**: Every 3 iterations
 - **Completion review**: On COMPLETE or STUCK
 

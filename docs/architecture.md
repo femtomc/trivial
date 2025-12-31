@@ -143,7 +143,7 @@ Loop state is stored as JSON in jwz messages on the `loop:current` topic:
       "id": "loop-1735500000-12345",
       "mode": "loop",
       "iter": 3,
-      "max": 10,
+      "max": 50,
       "prompt_file": "/tmp/idle-loop-prompt.txt",
       "reviewed": false,
       "checkpoint_reviewed": false

@@ -217,10 +217,11 @@ fn initializeInfrastructure(allocator: std.mem.Allocator) !void {
         var ts_buf: [32]u8 = undefined;
         const updated_at = jwz.formatIso8601ToBuf(now, &ts_buf);
 
+        const max_iter = idle.state_machine.DEFAULT_MAX_ITERATIONS;
         var json_buf: [512]u8 = undefined;
         const state_json = std.fmt.bufPrint(&json_buf,
-            \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"loop","iter":0,"max":10,"prompt_file":"","reviewed":false,"checkpoint_reviewed":false}}]}}
-        , .{ run_id, updated_at, run_id }) catch return;
+            \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"loop","iter":0,"max":{},"prompt_file":"","reviewed":false,"checkpoint_reviewed":false}}]}}
+        , .{ run_id, updated_at, run_id, max_iter }) catch return;
 
         const sender = zawinski.store.Sender{
             .id = "idle",

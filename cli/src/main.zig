@@ -66,7 +66,7 @@ pub fn main() !u8 {
     } else if (std.mem.eql(u8, command, "issues")) {
         return runIssues(allocator, args[2..]);
     } else if (std.mem.eql(u8, command, "version")) {
-        try writeStdout("idle 1.8.0\n");
+        try writeStdout("idle 1.8.1\n");
         return 0;
     } else if (std.mem.eql(u8, command, "debug-alice-count")) {
         return runDebugAliceCount(allocator);
@@ -218,10 +218,11 @@ fn runInitLoop(allocator: std.mem.Allocator) !u8 {
     const updated_at = idle.jwz_utils.formatIso8601ToBuf(now, &ts_buf);
 
     // Build JSON state
+    const max_iter = idle.state_machine.DEFAULT_MAX_ITERATIONS;
     var json_buf: [512]u8 = undefined;
     const state_json = std.fmt.bufPrint(&json_buf,
-        \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"loop","iter":0,"max":10,"prompt_file":"","reviewed":false,"checkpoint_reviewed":false}}]}}
-    , .{ run_id, updated_at, run_id }) catch {
+        \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"loop","iter":0,"max":{},"prompt_file":"","reviewed":false,"checkpoint_reviewed":false}}]}}
+    , .{ run_id, updated_at, run_id, max_iter }) catch {
         try writeStderr("Failed to format state\n");
         return 1;
     };

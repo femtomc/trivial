@@ -10,7 +10,7 @@ Infrastructure (`.zawinski/`, `.tissue/`, loop state) is initialized automatical
 
 ## Configuration
 
-- **Max iterations**: 10
+- **Max iterations**: 50
 - **Checkpoint reviews**: Every 3 iterations (alice)
 - **Completion review**: On COMPLETE/STUCK signals (alice)
 

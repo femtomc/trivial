@@ -56,6 +56,7 @@ pub const CompletionReason = enum {
 
 /// Checkpoint review interval (every N iterations)
 pub const CHECKPOINT_INTERVAL: u32 = 3;
+pub const DEFAULT_MAX_ITERATIONS: u32 = 50;
 
 /// Stack frame representing a loop execution context
 pub const StackFrame = struct {
