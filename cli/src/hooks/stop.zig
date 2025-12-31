@@ -369,28 +369,46 @@ fn formatIso8601(ts: i64) [20]u8 {
 /// Count open alice-review issues via tissue CLI
 /// Returns 0 if tissue unavailable or no issues found
 fn countOpenAliceReviewIssues(allocator: std.mem.Allocator) u32 {
-    // Run tissue list -t alice-review --status open
+    // Get current working directory to pass to subprocess
+    var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const cwd = std.process.getCwd(&cwd_buf) catch return 0;
+
+    // Run tissue list --json and parse output
+    // Use larger buffer since issue list can be big
     const result = std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{ "tissue", "list", "-t", "alice-review", "--status", "open" },
+        .argv = &.{ "tissue", "list", "--json" },
+        .cwd = cwd,
+        .max_output_bytes = 1024 * 1024, // 1MB should be plenty
     }) catch return 0;
 
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
 
-    // Count non-empty lines (each line is an issue)
     if (result.stdout.len == 0) return 0;
 
+    // Parse JSON array and count open alice-review issues
+    // JSON format: [{"id":"...","status":"open","tags":"alice-review",...},...]
     var count: u32 = 0;
-    var lines = std.mem.splitScalar(u8, result.stdout, '\n');
-    while (lines.next()) |line| {
-        // Skip empty lines and header lines
-        const trimmed = std.mem.trim(u8, line, " \t\r");
-        if (trimmed.len == 0) continue;
-        // Skip header line (starts with "ID" typically)
-        if (std.mem.startsWith(u8, trimmed, "ID")) continue;
-        count += 1;
+    var pos: usize = 0;
+
+    while (pos < result.stdout.len) {
+        // Find next issue object
+        const obj_start = std.mem.indexOfPos(u8, result.stdout, pos, "{") orelse break;
+        const obj_end = std.mem.indexOfPos(u8, result.stdout, obj_start, "}") orelse break;
+        const obj = result.stdout[obj_start .. obj_end + 1];
+
+        // Check if status is "open" and tags contains "alice-review"
+        const has_open = std.mem.indexOf(u8, obj, "\"status\":\"open\"") != null;
+        const has_alice_review = std.mem.indexOf(u8, obj, "alice-review") != null;
+
+        if (has_open and has_alice_review) {
+            count += 1;
+        }
+
+        pos = obj_end + 1;
     }
+
     return count;
 }
 
