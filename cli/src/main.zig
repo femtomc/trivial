@@ -3,6 +3,7 @@ const tissue = @import("tissue");
 
 const hooks = struct {
     const stop = @import("hooks/stop.zig");
+    const subagent_stop = @import("hooks/subagent_stop.zig");
     const pre_compact = @import("hooks/pre_compact.zig");
     const session_start = @import("hooks/session_start.zig");
 };
@@ -39,6 +40,8 @@ pub fn main() !u8 {
 
     if (std.mem.eql(u8, command, "stop")) {
         return hooks.stop.run(allocator);
+    } else if (std.mem.eql(u8, command, "subagent-stop")) {
+        return hooks.subagent_stop.run(allocator);
     } else if (std.mem.eql(u8, command, "pre-compact")) {
         return hooks.pre_compact.run(allocator);
     } else if (std.mem.eql(u8, command, "session-start")) {

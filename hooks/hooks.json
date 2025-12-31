@@ -1,5 +1,5 @@
 {
-  "description": "idle plugin hooks - loops, recovery, and workflow guidance",
+  "description": "idle plugin hooks - alice quality gate on all exits",
   "hooks": {
     "SessionStart": [
       {
@@ -17,6 +17,16 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/subagent-stop.sh"
           }
         ]
       }
