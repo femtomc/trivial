@@ -4,8 +4,6 @@ const zawinski = @import("zawinski");
 
 const hooks = struct {
     const stop = @import("hooks/stop.zig");
-    const subagent_stop = @import("hooks/subagent_stop.zig");
-    const pre_tool_use = @import("hooks/pre_tool_use.zig");
     const pre_compact = @import("hooks/pre_compact.zig");
     const session_start = @import("hooks/session_start.zig");
 };
@@ -14,11 +12,9 @@ const usage =
     \\Usage: idle <command> [options]
     \\
     \\Hooks:
-    \\  stop           Stop hook (core loop mechanism)
-    \\  subagent-stop  Subagent stop hook (alice second-opinion gate)
-    \\  pre-tool-use   Pre-tool-use hook (safety guardrails)
+    \\  stop           Stop hook (core loop mechanism, alice review)
     \\  pre-compact    Pre-compact hook (recovery anchors)
-    \\  session-start  Session start hook (agent awareness)
+    \\  session-start  Session start hook (loop context, agent awareness)
     \\
     \\Commands:
     \\  status         Show loop status (JSON or human-readable)
@@ -53,10 +49,6 @@ pub fn main() !u8 {
     // Hooks
     if (std.mem.eql(u8, command, "stop")) {
         return hooks.stop.run(allocator);
-    } else if (std.mem.eql(u8, command, "subagent-stop")) {
-        return hooks.subagent_stop.run(allocator);
-    } else if (std.mem.eql(u8, command, "pre-tool-use")) {
-        return hooks.pre_tool_use.run(allocator);
     } else if (std.mem.eql(u8, command, "pre-compact")) {
         return hooks.pre_compact.run(allocator);
     } else if (std.mem.eql(u8, command, "session-start")) {

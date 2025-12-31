@@ -1,5 +1,5 @@
 {
-  "description": "idle plugin hooks - loops, safety, recovery, and workflow guidance",
+  "description": "idle plugin hooks - loops, recovery, and workflow guidance",
   "hooks": {
     "SessionStart": [
       {
@@ -17,27 +17,6 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/idle stop"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/idle subagent-stop"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/idle pre-tool-use"
           }
         ]
       }
