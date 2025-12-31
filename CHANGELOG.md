@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Alice review on completion signals** - Stop hook now triggers alice review
+  - When Claude signals `COMPLETE` or `STUCK`, blocks exit for alice review
+  - `reviewed` flag in StackFrame tracks review state
+  - After alice review, loop can complete normally
+- **Enhanced SessionStart hook** - Injects full loop context
+  - Shows active loop state (mode, iteration, issue, worktree, branch)
+  - Comprehensive alice usage guidance
+- **Enhanced SubagentStop hook** - Post-alice guidance
+  - After alice completes, injects next steps for acting on review
+- **Enhanced PreCompact hook** - Alice reminder in recovery anchor
+  - Anchor JSON includes `alice_reminder` field
+  - Output reminds about alice availability before compaction
+
 ### Removed
 
 - **Agents removed**: `bob` (orchestrator) and `charlie` (worker) agents removed

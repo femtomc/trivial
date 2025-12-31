@@ -51,20 +51,28 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     const progress = "See git log for recent commits";
     const modified = "See git status for modified files";
 
-    // Build anchor JSON
-    var anchor_buf: [1024]u8 = undefined;
+    // Build anchor JSON with alice reminder
+    var anchor_buf: [2048]u8 = undefined;
     const anchor = std.fmt.bufPrint(&anchor_buf,
-        \\{{"goal":"{s}","mode":"{s}","iteration":"{}/{}","progress":"{s}","modified_files":"{s}","next_step":"Continue working on the task. Check git status and loop state."}}
+        \\{{"goal":"{s}","mode":"{s}","iteration":"{}/{}","progress":"{s}","modified_files":"{s}","next_step":"Continue working on the task. Check git status and loop state.","alice_reminder":"Use Task tool with subagent_type=idle:alice for design review, debugging help, or completion review. Alice consults multiple models for second opinions."}}
     , .{ goal, @tagName(frame.mode), frame.iter, frame.max, progress, modified }) catch return 0;
 
     // Post anchor to jwz
     try postJwzMessage(allocator, "loop:anchor", anchor);
 
-    // Output minimal pointer
-    var stdout_buf: [128]u8 = undefined;
+    // Output context that survives compaction
+    var stdout_buf: [512]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
     const stdout = &stdout_writer.interface;
-    try stdout.writeAll("IDLE: Recovery anchor saved. After compaction: jwz read loop:anchor\n");
+    try stdout.writeAll(
+        \\IDLE: Recovery anchor saved before compaction.
+        \\
+        \\After compaction, recover context with: jwz read loop:anchor
+        \\
+        \\Remember: idle:alice is available for deep reasoning and review.
+        \\Use Task tool with subagent_type="idle:alice" when stuck or need review.
+        \\
+    );
     try stdout.flush();
 
     return 0;

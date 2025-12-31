@@ -81,8 +81,81 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     // Handle result
     switch (result.decision) {
         .allow_exit => {
-            // Auto-land for issue mode with COMPLETE
+            // Check if this is a completion signal that needs alice review
             if (result.completion_reason) |reason| {
+                // Only trigger alice review for COMPLETE or STUCK signals, and only if not already reviewed
+                const needs_review = (reason == .COMPLETE or reason == .STUCK) and !frame.reviewed;
+
+                if (needs_review) {
+                    // Block exit and request alice review
+                    const ts = formatIso8601(now_ts);
+
+                    // Build state with reviewed = true
+                    var state_buf: [2048]u8 = undefined;
+                    var state_len = (std.fmt.bufPrint(&state_buf,
+                        \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":true
+                    , .{
+                        state.run_id,
+                        &ts,
+                        frame.id,
+                        @tagName(frame.mode),
+                        frame.iter,
+                        frame.max,
+                        frame.prompt_file,
+                    }) catch return 0).len;
+
+                    // Add optional fields
+                    if (frame.issue_id) |id| {
+                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
+                            ",\"issue_id\":\"{s}\"", .{id}) catch return 0).len;
+                    }
+                    if (frame.worktree_path) |path| {
+                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
+                            ",\"worktree_path\":\"{s}\"", .{path}) catch return 0).len;
+                    }
+                    if (frame.branch) |branch| {
+                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
+                            ",\"branch\":\"{s}\"", .{branch}) catch return 0).len;
+                    }
+                    if (frame.base_ref) |base_ref| {
+                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
+                            ",\"base_ref\":\"{s}\"", .{base_ref}) catch return 0).len;
+                    }
+                    state_len += (std.fmt.bufPrint(state_buf[state_len..], "}}]}}", .{}) catch return 0).len;
+
+                    try postJwzMessage(allocator, "loop:current", state_buf[0..state_len]);
+
+                    // Build alice review instruction
+                    const reason_str = @tagName(reason);
+                    var reason_buf: [4096]u8 = undefined;
+                    const reason_len = (std.fmt.bufPrint(&reason_buf,
+                        \\[REVIEW REQUIRED] You signaled {s}. Before completing, invoke the alice agent to review your work.
+                        \\
+                        \\Use the Task tool with subagent_type="idle:alice" to get a second opinion on:
+                        \\1. Whether the implementation is correct and complete
+                        \\2. Any architectural concerns or edge cases missed
+                        \\3. Whether {s} is the appropriate completion status
+                        \\
+                        \\After receiving alice's review, either:
+                        \\- Signal completion again if alice approves
+                        \\- Continue working to address alice's feedback
+                    , .{ reason_str, reason_str }) catch return 0).len;
+
+                    // Output block decision
+                    var stdout_buf: [8192]u8 = undefined;
+                    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+                    const stdout = &stdout_writer.interface;
+
+                    var escaped_buf: [8192]u8 = undefined;
+                    const escaped = escapeJson(reason_buf[0..reason_len], &escaped_buf);
+
+                    try stdout.print("{{\"decision\":\"block\",\"reason\":\"{s}\"}}\n", .{escaped});
+                    try stdout.flush();
+
+                    return 2; // Block exit for review
+                }
+
+                // Already reviewed or doesn't need review - proceed with exit
                 if (reason == .COMPLETE and frame.mode == .issue) {
                     if (frame.worktree_path) |wt_path| {
                         if (frame.branch) |branch| {
@@ -134,11 +207,11 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     "\n\nIMPORTANT: All file operations must use absolute paths under {s}", .{wt_path}) catch return 0).len;
             }
 
-            // Update state with new iteration
+            // Update state with new iteration (reset reviewed to false since new work will be done)
             var state_buf: [2048]u8 = undefined;
             const ts = formatIso8601(now_ts);
             var state_len = (std.fmt.bufPrint(&state_buf,
-                \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}"
+                \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":false
             , .{
                 state.run_id,
                 &ts,

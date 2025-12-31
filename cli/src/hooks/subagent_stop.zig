@@ -43,7 +43,29 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
         return blockWithReason();
     }
 
-    // Second opinion obtained, allow completion
+    // Second opinion obtained - inject guidance for acting on the review
+    var stdout_buf: [2048]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+    const stdout = &stdout_writer.interface;
+
+    try stdout.writeAll(
+        \\
+        \\[ALICE REVIEW COMPLETE] The alice agent has finished its analysis with second opinion.
+        \\
+        \\Next steps:
+        \\1. Review alice's findings and recommendations above
+        \\2. If alice identified issues:
+        \\   - Address the concerns before signaling completion
+        \\   - Make necessary changes to your implementation
+        \\3. If alice approved:
+        \\   - You may proceed to signal completion
+        \\   - Use <loop-done>COMPLETE</loop-done> to finish the loop
+        \\
+        \\Remember: alice's review is now part of the record. Act on the feedback.
+        \\
+    );
+    try stdout.flush();
+
     return 0;
 }
 
