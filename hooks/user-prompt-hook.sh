@@ -22,6 +22,9 @@ if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]]; then
     TOPIC="user:context:$SESSION_ID"
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+    # Create topic if it doesn't exist
+    jwz topic new "$TOPIC" 2>/dev/null || true
+
     # Create message payload
     MSG=$(jq -n \
         --arg prompt "$USER_PROMPT" \
