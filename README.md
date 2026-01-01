@@ -2,6 +2,18 @@
 
 Quality gate plugin for Claude Code. Blocks exit until work passes review by an independent agent.
 
+## Install
+
+```sh
+curl -fsSL https://github.com/evil-mind-evil-sword/idle/releases/latest/download/install.sh | sh
+```
+
+This installs:
+- `jwz` - Agent messaging
+- `tissue` - Issue tracking
+- `jq` - JSON parsing (if needed)
+- The idle plugin (registered with Claude Code)
+
 ## Motivation
 
 LLMs struggle to reliably evaluate their own outputs ([Huang et al., 2023](https://arxiv.org/abs/2310.01798)). A model asked to verify its work tends to confirm rather than critique. This creates a gap in agentic coding workflows—agents can exit believing they've completed a task when issues remain.
@@ -64,18 +76,6 @@ Three principles guide idle's architecture:
 | **Pull over push** | Agents retrieve context on demand, not via large upfront injections |
 | **Safety over policy** | Critical guardrails enforced mechanically (hooks), not via prompts |
 | **Pointer over payload** | Messages contain references (issue IDs, session IDs), not inline content |
-
-## Install
-
-```sh
-curl -fsSL https://github.com/evil-mind-evil-sword/idle/releases/latest/download/install.sh | sh
-```
-
-This installs:
-- `jwz` - Agent messaging
-- `tissue` - Issue tracking
-- `jq` - JSON parsing (if needed)
-- The idle plugin (registered with Claude Code)
 
 ## Skills
 
