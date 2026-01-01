@@ -63,19 +63,19 @@ Google's CLI for research and long-context analysis.
 ### Invocation
 
 ```bash
-gemini -s -m gemini-2.5-pro "<prompt>"
+gemini -s -m gemini-3-pro-preview "<prompt>"
 ```
 
 | Flag | Purpose |
 |------|---------|
 | `-s` | **Required** - sandbox mode |
-| `-m gemini-2.5-pro` | Best model for research/long-context |
+| `-m gemini-3-pro-preview` | Best model for research/long-context |
 
 ### Models
 
 | Model | Use Case |
 |-------|----------|
-| `gemini-2.5-pro` | **Default** - research, long context (>100k tokens) |
+| `gemini-3-pro-preview` | **Default** - research, long context (>100k tokens) |
 | `gemini-3-pro` | Latest capabilities (when available) |
 
 ### Strengths
@@ -131,7 +131,7 @@ Key insight: <summary>
 ### Tie-Breaker (Gemini)
 
 ```bash
-gemini -s -m gemini-2.5-pro "
+gemini -s -m gemini-3-pro-preview "
 Analysis A (Claude): <view>
 Analysis B (Codex): <view>
 
@@ -154,7 +154,7 @@ For high-stakes decisions, query both:
 codex exec -s read-only -m gpt-5.2 -c reasoning=xhigh "..." > /tmp/codex.log 2>&1
 
 # Get Gemini opinion
-gemini -s -m gemini-2.5-pro "..." > /tmp/gemini.log 2>&1
+gemini -s -m gemini-3-pro-preview "..." > /tmp/gemini.log 2>&1
 
 # Compare summaries
 sed -n '/---SUMMARY---/,$ p' /tmp/codex.log
@@ -185,10 +185,10 @@ Synthesis: <reconciled view>"
 
 ```bash
 # Codex with xhigh reasoning can take time
-timeout 180 codex exec -s read-only -m gpt-5.2 -c reasoning=xhigh "..."
+timeout 600 codex exec -s read-only -m gpt-5.2 -c reasoning=xhigh "..."
 
 # Gemini
-timeout 120 gemini -s -m gemini-2.5-pro "..."
+timeout 600 gemini -s -m gemini-3-pro-preview "..."
 ```
 
 ## Fallback Chain
@@ -197,7 +197,7 @@ timeout 120 gemini -s -m gemini-2.5-pro "..."
 if command -v codex >/dev/null 2>&1; then
     codex exec -s read-only -m gpt-5.2 -c reasoning=xhigh "..."
 elif command -v gemini >/dev/null 2>&1; then
-    gemini -s -m gemini-2.5-pro "..."
+    gemini -s -m gemini-3-pro-preview "..."
 else
     claude -p "..."
 fi
