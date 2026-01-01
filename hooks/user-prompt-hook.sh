@@ -19,11 +19,13 @@ cd "$CWD"
 
 # Store user message to jwz for alice context
 if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]]; then
-    TOPIC="user:context:$SESSION_ID"
+    USER_TOPIC="user:context:$SESSION_ID"
+    ALICE_TOPIC="alice:status:$SESSION_ID"
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Create topic if it doesn't exist
-    jwz topic new "$TOPIC" 2>/dev/null || true
+    # Create both topics if they don't exist
+    jwz topic new "$USER_TOPIC" 2>/dev/null || true
+    jwz topic new "$ALICE_TOPIC" 2>/dev/null || true
 
     # Create message payload
     MSG=$(jq -n \
@@ -31,7 +33,7 @@ if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]]; then
         --arg ts "$TIMESTAMP" \
         '{type: "user_message", prompt: $prompt, timestamp: $ts}')
 
-    jwz post "$TOPIC" -m "$MSG" 2>/dev/null || true
+    jwz post "$USER_TOPIC" -m "$MSG" 2>/dev/null || true
 fi
 
 # Always approve - this hook just captures, doesn't gate
