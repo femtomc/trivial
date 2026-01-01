@@ -72,7 +72,7 @@ REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 if command -v jwz &>/dev/null; then
     STATE_RAW=$(jwz read "$REVIEW_STATE_TOPIC" --json 2>/dev/null | jq -r '.[0].body // empty' || echo "")
     if [[ -n "$STATE_RAW" ]]; then
-        REVIEW_ENABLED_RAW=$(echo "$STATE_RAW" | jq -r '.enabled // true' 2>/dev/null || echo "true")
+        REVIEW_ENABLED_RAW=$(echo "$STATE_RAW" | jq -r 'if has("enabled") then .enabled else true end' 2>/dev/null || echo "true")
         [[ "$REVIEW_ENABLED_RAW" == "false" ]] && REVIEW_ENABLED=false
     fi
 fi
