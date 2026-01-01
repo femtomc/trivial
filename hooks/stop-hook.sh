@@ -77,20 +77,10 @@ if command -v jwz &>/dev/null; then
     fi
 fi
 
-# --- Handle review not enabled ---
+# --- Handle review not enabled (silent approve) ---
 
 if [[ "$REVIEW_ENABLED" == "false" ]]; then
-    SKIP_REASON="Review not enabled (use #gate to enable)"
-
-    NOTIFY_TITLE="[$PROJECT_LABEL] Skipped Review"
-    NOTIFY_BODY="**Task**
-> $USER_REQUEST_PREVIEW
-
-**Status**
-$SKIP_REASON"
-    notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 2 "fast_forward" "$REPO_URL" "" "$DISCORD_THREAD_ID"
-
-    jq -n --arg reason "$SKIP_REASON" '{decision: "approve", reason: $reason}'
+    jq -n '{decision: "approve", reason: "Review not enabled"}'
     exit 0
 fi
 
