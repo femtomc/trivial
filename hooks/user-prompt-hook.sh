@@ -28,17 +28,17 @@ REPO_URL=$(get_repo_url "$CWD")
 PROJECT_LABEL="$PROJECT_NAME"
 [[ -n "$GIT_BRANCH" ]] && PROJECT_LABEL="$PROJECT_NAME:$GIT_BRANCH"
 
-# Post to ntfy (truncate long prompts)
+# Post notification (truncate very long prompts)
 if [[ -n "$USER_PROMPT" ]]; then
-    PROMPT_PREVIEW="$USER_PROMPT"
-    if [[ ${#PROMPT_PREVIEW} -gt 200 ]]; then
-        PROMPT_PREVIEW="${PROMPT_PREVIEW:0:200}..."
+    PROMPT_DISPLAY="$USER_PROMPT"
+    if [[ ${#PROMPT_DISPLAY} -gt 500 ]]; then
+        PROMPT_DISPLAY="${PROMPT_DISPLAY:0:500}..."
     fi
 
-    NTFY_TITLE="[$PROJECT_LABEL] New task"
-    NTFY_BODY="$PROMPT_PREVIEW"
+    NOTIFY_TITLE="[$PROJECT_LABEL] New task"
+    NOTIFY_BODY="> $PROMPT_DISPLAY"
 
-    notify "$NTFY_TITLE" "$NTFY_BODY" 3 "speech_balloon" "$REPO_URL"
+    notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 3 "speech_balloon" "$REPO_URL"
 fi
 
 # Store user message to jwz for alice context

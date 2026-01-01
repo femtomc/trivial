@@ -71,7 +71,7 @@ notify() {
 }
 
 # Post to Discord webhook with rich embed
-# Colors: green=5763719, red=15548997, yellow=16705372, blue=5793266
+# Colors: green=5763719, red=15548997, yellow=16705372, blue=5793266, gray=9807270
 discord_post() {
     local title="$1"
     local body="$2"
@@ -87,8 +87,15 @@ discord_post() {
     # Map priority to color
     local color=5793266  # blue (default)
     case "$priority" in
-        4|5) color=15548997 ;;  # red (high/urgent)
-        1|2) color=8421504 ;;   # gray (low)
+        5) color=15548997 ;;    # red (urgent - blocked)
+        4) color=16705372 ;;    # yellow (high - warning)
+        1|2) color=9807270 ;;   # gray (low)
+    esac
+
+    # Override color based on emoji for clearer visual
+    case "$emoji" in
+        white_check_mark) color=5763719 ;;  # green for approved
+        x) color=15548997 ;;                 # red for blocked
     esac
 
     # Map emoji tag to actual emoji
@@ -104,7 +111,11 @@ discord_post() {
     # Prepend emoji to title if present
     [[ -n "$emoji_char" ]] && title="$emoji_char $title"
 
-    # Build JSON payload
+    # Get timestamp
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    # Build JSON payload with timestamp
     local payload
     if [[ -n "$repo_url" ]]; then
         payload=$(jq -n \
@@ -112,13 +123,15 @@ discord_post() {
             --arg desc "$body" \
             --argjson color "$color" \
             --arg url "$repo_url" \
-            '{embeds: [{title: $title, description: $desc, color: $color, url: $url}]}')
+            --arg ts "$timestamp" \
+            '{embeds: [{title: $title, description: $desc, color: $color, url: $url, timestamp: $ts}]}')
     else
         payload=$(jq -n \
             --arg title "$title" \
             --arg desc "$body" \
             --argjson color "$color" \
-            '{embeds: [{title: $title, description: $desc, color: $color}]}')
+            --arg ts "$timestamp" \
+            '{embeds: [{title: $title, description: $desc, color: $color, timestamp: $ts}]}')
     fi
 
     # Post in background to not block hook

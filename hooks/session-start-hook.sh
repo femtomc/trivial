@@ -58,17 +58,20 @@ if [[ -n "$PLUGIN_ROOT" ]]; then
     done
 fi
 
-# Post to ntfy
-NTFY_TITLE="[$PROJECT_LABEL] Session started"
-NTFY_BODY="Tools:
-  codex: $CODEX_STATUS  gemini: $GEMINI_STATUS
-  tissue: $TISSUE_STATUS  jwz: $JWZ_STATUS
+# Post notification
+NOTIFY_TITLE="[$PROJECT_LABEL] Session started"
+NOTIFY_BODY="\`\`\`
+┌─ Tools ────────────────────────────
+│  codex: $CODEX_STATUS    gemini: $GEMINI_STATUS
+│  tissue: $TISSUE_STATUS   jwz: $JWZ_STATUS
+├─ Skills ───────────────────────────
+│  ${SKILLS:-none}
+├─ Session ──────────────────────────
+│  ${SESSION_ID:0:12}
+└────────────────────────────────────
+\`\`\`"
 
-Skills: ${SKILLS:-none}
-
-Session: ${SESSION_ID:0:8}"
-
-notify "$NTFY_TITLE" "$NTFY_BODY" 3 "rocket" "$REPO_URL"
+notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 3 "rocket" "$REPO_URL"
 
 # Build context message for agent
 CONTEXT="## idle Plugin Active

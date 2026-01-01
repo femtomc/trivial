@@ -49,8 +49,8 @@ fi
 
 # Truncate user request for notifications
 USER_REQUEST_PREVIEW="$USER_REQUEST"
-if [[ ${#USER_REQUEST_PREVIEW} -gt 100 ]]; then
-    USER_REQUEST_PREVIEW="${USER_REQUEST_PREVIEW:0:100}..."
+if [[ ${#USER_REQUEST_PREVIEW} -gt 200 ]]; then
+    USER_REQUEST_PREVIEW="${USER_REQUEST_PREVIEW:0:200}..."
 fi
 
 # --- Check: Has alice reviewed this session? ---
@@ -80,12 +80,16 @@ if [[ "$ALICE_DECISION" == "COMPLETE" || "$ALICE_DECISION" == "APPROVED" ]]; the
     [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON (msg: $ALICE_MSG_ID)"
     [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON - $ALICE_SUMMARY"
 
-    # Post approval to ntfy
-    NTFY_TITLE="[$PROJECT_LABEL] ✓ Alice approved"
-    NTFY_BODY="Task: $USER_REQUEST_PREVIEW
-
-$ALICE_SUMMARY"
-    notify "$NTFY_TITLE" "$NTFY_BODY" 3 "white_check_mark" "$REPO_URL"
+    # Post approval notification
+    NOTIFY_TITLE="[$PROJECT_LABEL] Approved"
+    NOTIFY_BODY="\`\`\`
+┌─ Task ─────────────────────────────
+│  $USER_REQUEST_PREVIEW
+├─ Result ───────────────────────────
+│  $ALICE_SUMMARY
+└────────────────────────────────────
+\`\`\`"
+    notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 3 "white_check_mark" "$REPO_URL"
 
     jq -n --arg reason "$REASON" '{decision: "approve", reason: $reason}'
     exit 0
@@ -103,16 +107,22 @@ $ALICE_SUMMARY"
 
 alice says: $ALICE_MESSAGE"
 
-    # Post block to ntfy (high priority)
-    NTFY_TITLE="[$PROJECT_LABEL] ✗ Alice blocked"
-    NTFY_BODY="Task: $USER_REQUEST_PREVIEW
-
-$ALICE_SUMMARY"
-    [[ -n "$ALICE_MESSAGE" ]] && NTFY_BODY="$NTFY_BODY
-
-Alice says:
-$ALICE_MESSAGE"
-    notify "$NTFY_TITLE" "$NTFY_BODY" 4 "x" "$REPO_URL"
+    # Post block notification (high priority)
+    NOTIFY_TITLE="[$PROJECT_LABEL] Blocked"
+    NOTIFY_BODY="\`\`\`
+┌─ Task ─────────────────────────────
+│  $USER_REQUEST_PREVIEW
+├─ Issues ───────────────────────────
+│  $ALICE_SUMMARY"
+    if [[ -n "$ALICE_MESSAGE" ]]; then
+        NOTIFY_BODY="$NOTIFY_BODY
+├─ Action Required ──────────────────
+│  $ALICE_MESSAGE"
+    fi
+    NOTIFY_BODY="$NOTIFY_BODY
+└────────────────────────────────────
+\`\`\`"
+    notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 5 "x" "$REPO_URL"
 
     jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
     exit 0
@@ -126,12 +136,17 @@ Use: Task tool with subagent_type='idle:alice' and prompt including SESSION_ID=$
 
 Alice will read your conversation context and decide if the work is complete or needs fixes."
 
-# Post pending review to ntfy
-NTFY_TITLE="[$PROJECT_LABEL] ⏳ Awaiting alice review"
-NTFY_BODY="Task: $USER_REQUEST_PREVIEW
-
-Agent attempting to exit without alice review."
-notify "$NTFY_TITLE" "$NTFY_BODY" 3 "hourglass" "$REPO_URL"
+# Post pending review notification
+NOTIFY_TITLE="[$PROJECT_LABEL] Awaiting Review"
+NOTIFY_BODY="\`\`\`
+┌─ Task ─────────────────────────────
+│  $USER_REQUEST_PREVIEW
+├─ Status ───────────────────────────
+│  Agent exiting without alice review
+│  Spawning alice for approval...
+└────────────────────────────────────
+\`\`\`"
+notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 4 "hourglass" "$REPO_URL"
 
 jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
 exit 0
