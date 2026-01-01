@@ -13,7 +13,7 @@ INPUT=$(cat)
 # Check if stop hook already triggered (prevent infinite loops)
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
-    echo '{"decision": "approve", "reason": "Stop hook already active"}'
+    jq -n '{decision: "approve", reason: "Stop hook already active"}'
     exit 0
 fi
 
@@ -43,11 +43,10 @@ if command -v jwz &>/dev/null; then
 fi
 
 if [[ "$ALICE_DECISION" == "COMPLETE" || "$ALICE_DECISION" == "APPROVED" ]]; then
-    # Include alice's message ID and summary in approval
     REASON="alice approved"
     [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON (msg: $ALICE_MSG_ID)"
     [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON - $ALICE_SUMMARY"
-    echo "{\"decision\": \"approve\", \"reason\": \"$REASON\"}"
+    jq -n --arg reason "$REASON" '{decision: "approve", reason: $reason}'
     exit 0
 fi
 
@@ -60,15 +59,17 @@ fi
 
 if [[ "$OPEN_ISSUES" -gt 0 ]]; then
     ISSUE_LIST=$(tissue list --tag alice-review --status open 2>/dev/null || echo "")
-    REASON="There are $OPEN_ISSUES open alice-review issue(s). Address them before exiting:\\n$ISSUE_LIST\\n\\nClose issues with: tissue status <id> closed"
-    [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON\\n\\nalice review: $ALICE_MSG_ID"
-    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON\\nalice said: $ALICE_SUMMARY"
-    cat <<EOF
-{
-  "decision": "block",
-  "reason": "$REASON"
-}
-EOF
+    REASON="There are $OPEN_ISSUES open alice-review issue(s). Address them before exiting.
+
+$ISSUE_LIST
+
+Close issues with: tissue status <id> closed"
+    [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON
+
+alice review: $ALICE_MSG_ID"
+    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON
+alice said: $ALICE_SUMMARY"
+    jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
     exit 0
 fi
 
@@ -77,25 +78,22 @@ fi
 if [[ "$ALICE_DECISION" == "ISSUES" ]]; then
     REASON="Previous alice issues resolved. Run /alice again for re-review before exiting."
     [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON (previous review: $ALICE_MSG_ID)"
-    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON\\n\\nalice said: $ALICE_SUMMARY"
-    cat <<EOF
-{
-  "decision": "block",
-  "reason": "$REASON"
-}
-EOF
+    [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON
+
+alice said: $ALICE_SUMMARY"
+    jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
     exit 0
 fi
 
 # --- Check 4: No alice review yet - request one ---
 
 USER_CONTEXT_TOPIC="user:context:$SESSION_ID"
-REASON="No alice review on record. Run /alice to get review approval before exiting.\\n\\nAlice will review your work and post issues to tissue if problems are found.\\n\\nUser context available at: $USER_CONTEXT_TOPIC\\nRead with: jwz read $USER_CONTEXT_TOPIC --json"
+REASON="No alice review on record. Run /alice to get review approval before exiting.
 
-cat <<EOF
-{
-  "decision": "block",
-  "reason": "$REASON"
-}
-EOF
+Alice will review your work and post issues to tissue if problems are found.
+
+User context available at: $USER_CONTEXT_TOPIC
+Read with: jwz read $USER_CONTEXT_TOPIC --json"
+
+jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
 exit 0
