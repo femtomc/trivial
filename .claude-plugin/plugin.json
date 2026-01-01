@@ -5,6 +5,6 @@
   "author": {
     "name": "femtomc"
   },
-  "agents": ["./agents/alice.md"],
-  "skills": ["./skills/reviewing/SKILL.md", "./skills/researching/SKILL.md", "./skills/issue-tracking/SKILL.md", "./skills/technical-writing/SKILL.md", "./skills/bib-managing/SKILL.md"]
+  "agents": "./agents/",
+  "skills": "./skills/"
 }
