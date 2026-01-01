@@ -176,11 +176,22 @@ fi
 
 # --- No review yet → request alice review ---
 
-REASON="No alice review for this session. Spawn the idle:alice agent to get review approval before exiting.
+REASON="No alice review for this session. You must spawn alice before exiting.
 
-Use: Task tool with subagent_type='idle:alice' and prompt including SESSION_ID=$SESSION_ID
+IMPORTANT: Do NOT summarize your work or justify your actions to alice. She forms her own judgment.
 
-Alice will read your conversation context and decide if the work is complete or needs fixes."
+Invoke alice with EXACTLY this prompt (no additions):
+
+---
+SESSION_ID=$SESSION_ID
+---
+
+Alice will:
+1. Read the user's original prompt transcript from jwz
+2. Examine the codebase changes independently
+3. Decide if the USER'S request (not your interpretation) was satisfied
+
+Do not attempt to influence alice's judgment. She works for the user, not you."
 
 # Post pending review notification (to thread if exists)
 NOTIFY_TITLE="[$PROJECT_LABEL] Awaiting Review"

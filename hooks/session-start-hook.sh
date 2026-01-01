@@ -78,10 +78,15 @@ You are running with the **idle** plugin, a quality gate system for Claude Code.
 
 ### Review System
 
-**Alice** is an adversarial reviewer agent that reviews your work before exit.
-- Spawn with: \`idle:alice\` subagent (Task tool with subagent_type)
-- Alice will review code changes and flag issues
-- The Stop hook gates exit on Alice's approval
+**Alice** is an adversarial reviewer who gates your exit. She works for the user, not you.
+
+Before exiting, you must spawn alice for review:
+- Use Task tool with \`subagent_type='idle:alice'\`
+- Prompt must be ONLY: \`SESSION_ID=<session_id>\`
+- Do NOT summarize your work or justify actions - alice forms her own judgment
+
+Alice will independently read the user's prompt transcript and examine your changes.
+She evaluates whether the USER'S request was satisfied, not your interpretation of it.
 
 ### Available Tools
 
