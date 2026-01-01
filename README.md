@@ -35,7 +35,7 @@ No issues = exit allowed. Issues exist = fix them first.
 │  │                     idle plugin                          │  │
 │  │                                                          │  │
 │  │   ┌─────────┐                                            │  │
-│  │   │  alice  │   Reviewer agent (Claude Opus)              │  │
+│  │   │  alice  │   Reviewer agent (Claude Opus)             │  │
 │  │   │         │   Read-only: cannot modify files           │  │
 │  │   └────┬────┘                                            │  │
 │  │        │ posts decision                                  │  │
