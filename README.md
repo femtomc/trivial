@@ -29,8 +29,8 @@ Agent works → tries to exit → Stop hook → alice reviewed? → block/allow
 ```
 
 1. **Stop hook** intercepts every agent exit attempt
-2. If `#idle:on` at start of prompt: enables review mode via [jwz](https://github.com/evil-mind-evil-sword/zawinski)
-3. Use `#idle:off` to disable review mode
+2. If `#idle` at start of prompt: enables review mode via [jwz](https://github.com/evil-mind-evil-sword/zawinski)
+3. Review mode is per prompt: use the hash command again when useful.
 4. If review enabled but no approval: blocks exit, agent must spawn alice
 5. **alice** (adversarial reviewer) examines the work
 6. Creates [tissue](https://github.com/evil-mind-evil-sword/tissue) issues for problems found
