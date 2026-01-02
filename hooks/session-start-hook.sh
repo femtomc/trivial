@@ -1,15 +1,11 @@
 #!/bin/bash
 # idle SessionStart hook
 # Injects context about the idle system into the main agent
-# Posts session start notification to ntfy
 #
 # Output: JSON with context field for injection
 # Exit 0 always
 
 set -euo pipefail
-
-# Source shared utilities
-source "${BASH_SOURCE%/*}/utils.sh"
 
 # Read hook input from stdin
 INPUT=$(cat)
@@ -19,19 +15,7 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "default"')
 
 cd "$CWD"
 
-# Get project info
-PROJECT_NAME=$(get_project_name "$CWD")
-GIT_BRANCH=$(get_git_branch "$CWD")
-REPO_URL=$(get_repo_url "$CWD")
-PROJECT_LABEL="$PROJECT_NAME"
-[[ -n "$GIT_BRANCH" ]] && PROJECT_LABEL="$PROJECT_NAME:$GIT_BRANCH"
-
 # Check tool availability
-CODEX_STATUS=$(format_tool_status codex)
-GEMINI_STATUS=$(format_tool_status gemini)
-TISSUE_STATUS=$(format_tool_status tissue)
-JWZ_STATUS=$(format_tool_status jwz)
-
 CODEX_AVAILABLE="false"
 GEMINI_AVAILABLE="false"
 TISSUE_AVAILABLE="false"
@@ -57,19 +41,6 @@ if [[ -n "$PLUGIN_ROOT" ]]; then
         fi
     done
 fi
-
-# Post notification
-NOTIFY_TITLE="[$PROJECT_LABEL] Session started"
-NOTIFY_BODY="**Tools**
-• codex: $CODEX_STATUS  • gemini: $GEMINI_STATUS
-• tissue: $TISSUE_STATUS  • jwz: $JWZ_STATUS
-
-**Skills**
-${SKILLS:-none}
-
-**Session** \`${SESSION_ID:0:12}\`"
-
-notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 3 "rocket" "$REPO_URL"
 
 # Build context message for agent
 CONTEXT="## idle Plugin Active
