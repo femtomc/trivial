@@ -1,6 +1,6 @@
 # idle Architecture
 
-**idle** is a quality gate plugin for Claude Code. Users opt into alice review via `#gate`.
+**idle** is a quality gate plugin for Claude Code. Users opt into alice review via `#idle:on` (disable with `#idle:off`).
 
 ## Design Philosophy
 
@@ -58,7 +58,7 @@ Agent tries to exit
         ▼
    stop-hook.sh
         │
-        ├─► Check if #gate enabled review
+        ├─► Check if #idle:on enabled review
         │   └─► Not enabled? → allow exit
         │
         ├─► Check jwz for alice decision

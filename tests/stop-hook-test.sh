@@ -56,7 +56,7 @@ echo "--- Test 2: No review enabled (default) ---"
 mkdir -p "$TEMP_DIR/no-tools"
 cd "$TEMP_DIR/no-tools"
 
-# Review is opt-in via #gate, so without it, exit is allowed
+# Review is opt-in via #idle:on, so without it, exit is allowed
 test_case "No tools available, review not enabled" "approve" '{
   "session_id": "test-456",
   "cwd": "'"$TEMP_DIR/no-tools"'",

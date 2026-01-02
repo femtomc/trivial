@@ -84,7 +84,7 @@ fi
 echo ""
 echo "Installation complete!"
 echo ""
-echo "The idle plugin is now active. Use #gate in your prompt to enable alice review."
+echo "The idle plugin is now active. Use #idle:on to enable review, #idle:off to disable."
 echo ""
 echo "Dependencies installed:"
 echo "  jwz     - Agent messaging"

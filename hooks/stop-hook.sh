@@ -64,8 +64,8 @@ if [[ ${#USER_REQUEST_PREVIEW} -gt 200 ]]; then
     USER_REQUEST_PREVIEW="${USER_REQUEST_PREVIEW:0:200}..."
 fi
 
-# --- Check review state (opt-in via #gate) ---
-# Fail-closed: default to blocking, only approve if positively confirmed no #gate
+# --- Check review state (opt-in via #idle:on, opt-out via #idle:off) ---
+# Fail-open with notification: approve if review system unavailable
 
 REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
@@ -90,7 +90,7 @@ set -e
 if [[ $JWZ_EXIT -ne 0 ]]; then
     # jwz command failed
     if command grep -q "Topic not found" "$JWZ_TMPFILE"; then
-        # Topic doesn't exist - no #gate was used, approve
+        # Topic doesn't exist - #idle:on was never used, approve
         jq -n '{decision: "approve", reason: "Review not enabled"}'
         exit 0
     else
