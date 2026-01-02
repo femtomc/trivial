@@ -64,51 +64,55 @@ if [[ ${#USER_REQUEST_PREVIEW} -gt 200 ]]; then
     USER_REQUEST_PREVIEW="${USER_REQUEST_PREVIEW:0:200}..."
 fi
 
-# --- Check review state (opt-in via #gate, default is off) ---
-# Fail-closed: if we can't determine state, block rather than approve
+# --- Check review state (opt-in via #gate) ---
+# Fail-closed: default to blocking, only approve if positively confirmed no #gate
 
-REVIEW_ENABLED=false
 REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
 if ! command -v jwz &>/dev/null; then
-    # jwz not installed - can't determine state, fail closed
     jq -n '{decision: "block", reason: "jwz not available - cannot determine review state"}'
     exit 0
 fi
 
-# Try to read review state (disable errexit temporarily)
+# Try to read review state using temp file to preserve JSON integrity
+JWZ_TMPFILE=$(mktemp)
+trap "rm -f $JWZ_TMPFILE" EXIT
+
 set +e
-JWZ_OUTPUT=$(jwz read "$REVIEW_STATE_TOPIC" --json 2>&1)
+jwz read "$REVIEW_STATE_TOPIC" --json > "$JWZ_TMPFILE" 2>&1
 JWZ_EXIT=$?
 set -e
 
-if [[ $JWZ_EXIT -eq 0 ]]; then
-    # Successfully read topic
-    STATE_RAW=$(echo "$JWZ_OUTPUT" | jq -r '.[0].body // empty' 2>/dev/null || echo "")
-    if [[ -n "$STATE_RAW" ]]; then
-        REVIEW_ENABLED_RAW=$(echo "$STATE_RAW" | jq -r 'if has("enabled") then .enabled else false end' 2>/dev/null)
-        if [[ -z "$REVIEW_ENABLED_RAW" ]]; then
-            # jq parsing failed - fail closed
-            jq -n '{decision: "block", reason: "Failed to parse review state"}'
-            exit 0
-        fi
-        [[ "$REVIEW_ENABLED_RAW" == "true" ]] && REVIEW_ENABLED=true
+# Determine review state with fail-closed logic
+if [[ $JWZ_EXIT -ne 0 ]]; then
+    # jwz command failed
+    if command grep -q "Topic not found" "$JWZ_TMPFILE"; then
+        # Topic doesn't exist - no #gate was used, approve
+        jq -n '{decision: "approve", reason: "Review not enabled"}'
+        exit 0
+    else
+        # Unknown jwz error - fail closed
+        ERR_MSG=$(cat "$JWZ_TMPFILE")
+        jq -n --arg err "$ERR_MSG" '{decision: "block", reason: ("jwz error: " + $err)}'
+        exit 0
     fi
-elif echo "$JWZ_OUTPUT" | command grep -q "Topic not found"; then
-    # Topic doesn't exist - no #gate was used, this is fine
-    REVIEW_ENABLED=false
-else
-    # jwz failed for unknown reason - fail closed
-    jq -n --arg err "$JWZ_OUTPUT" '{decision: "block", reason: ("jwz error: " + $err)}'
+fi
+
+# jwz succeeded - parse the response directly from file
+REVIEW_ENABLED_RAW=$(jq -r '.[0].body | fromjson | .enabled // empty' "$JWZ_TMPFILE" 2>/dev/null)
+if [[ -z "$REVIEW_ENABLED_RAW" ]]; then
+    # Can't parse enabled field - fail closed
+    jq -n '{decision: "block", reason: "Failed to parse review state"}'
     exit 0
 fi
 
-# --- Handle review not enabled (silent approve) ---
-
-if [[ "$REVIEW_ENABLED" == "false" ]]; then
+if [[ "$REVIEW_ENABLED_RAW" != "true" ]]; then
+    # enabled is explicitly false or something else - approve
     jq -n '{decision: "approve", reason: "Review not enabled"}'
     exit 0
 fi
+
+# Review is enabled - continue to alice check
 
 # --- Check: Has alice reviewed this session? ---
 
