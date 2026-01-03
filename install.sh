@@ -27,13 +27,13 @@ fi
 # Install jwz (zawinski)
 if ! command -v jwz >/dev/null 2>&1; then
     echo "Installing jwz (zawinski)..."
-    curl -fsSL https://github.com/femtomc/zawinski/releases/latest/download/install.sh | sh
+    curl -fsSL https://evil-mind-evil-sword.github.io/releases/zawinski/install.sh | sh
 fi
 
 # Install tissue
 if ! command -v tissue >/dev/null 2>&1; then
     echo "Installing tissue..."
-    curl -fsSL https://github.com/femtomc/tissue/releases/latest/download/install.sh | sh
+    curl -fsSL https://evil-mind-evil-sword.github.io/releases/tissue/install.sh | sh
 fi
 
 echo "Dependencies installed."
