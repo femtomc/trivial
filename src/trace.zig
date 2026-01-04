@@ -195,6 +195,12 @@ pub const Trace = struct {
                     if (extractJsonField(event.payload_json, "tool_name")) |tool_name| {
                         try writer.print(": {s}", .{tool_name});
                     }
+                    // Show success/failure indicator
+                    if (extractJsonBool(event.payload_json, "success")) |success| {
+                        if (!success) {
+                            try writer.writeAll(" [FAILED]");
+                        }
+                    }
                 } else if (event.event_type == .prompt_received) {
                     if (extractJsonField(event.payload_json, "prompt")) |prompt| {
                         // Truncate long prompts
@@ -218,20 +224,59 @@ pub const Trace = struct {
     /// Extract a string field from JSON payload (simple parser)
     /// Note: Does not handle escaped quotes within values. For display purposes only.
     fn extractJsonField(json: []const u8, field: []const u8) ?[]const u8 {
-        // Look for "field":"value" pattern
+        // Look for "field":"value" or "field": "value" pattern
         var search_buf: [64]u8 = undefined;
-        const search = std.fmt.bufPrint(&search_buf, "\"{s}\":\"", .{field}) catch return null;
 
+        // Try without space first
+        const search1 = std.fmt.bufPrint(&search_buf, "\"{s}\":\"", .{field}) catch return null;
+        if (findStringValue(json, search1)) |value| return value;
+
+        // Try with space
+        var search_buf2: [64]u8 = undefined;
+        const search2 = std.fmt.bufPrint(&search_buf2, "\"{s}\": \"", .{field}) catch return null;
+        if (findStringValue(json, search2)) |value| return value;
+
+        return null;
+    }
+
+    fn findStringValue(json: []const u8, search: []const u8) ?[]const u8 {
         if (std.mem.indexOf(u8, json, search)) |start| {
             const value_start = start + search.len;
-            // Find closing quote, skipping escaped quotes
             var i = value_start;
             while (i < json.len) : (i += 1) {
                 if (json[i] == '"') {
-                    // Check if escaped
                     if (i > 0 and json[i - 1] == '\\') continue;
                     return json[value_start..i];
                 }
+            }
+        }
+        return null;
+    }
+
+    /// Extract a boolean field from JSON payload
+    fn extractJsonBool(json: []const u8, field: []const u8) ?bool {
+        var search_buf: [64]u8 = undefined;
+
+        // Try "field": value (with space)
+        const search1 = std.fmt.bufPrint(&search_buf, "\"{s}\": ", .{field}) catch return null;
+        if (findBoolValue(json, search1)) |val| return val;
+
+        // Try "field":value (no space)
+        var search_buf2: [64]u8 = undefined;
+        const search2 = std.fmt.bufPrint(&search_buf2, "\"{s}\":", .{field}) catch return null;
+        if (findBoolValue(json, search2)) |val| return val;
+
+        return null;
+    }
+
+    fn findBoolValue(json: []const u8, search: []const u8) ?bool {
+        if (std.mem.indexOf(u8, json, search)) |start| {
+            const value_start = start + search.len;
+            if (value_start + 4 <= json.len and std.mem.eql(u8, json[value_start..][0..4], "true")) {
+                return true;
+            }
+            if (value_start + 5 <= json.len and std.mem.eql(u8, json[value_start..][0..5], "false")) {
+                return false;
             }
         }
         return null;

@@ -17,8 +17,11 @@ INPUT=$(cat || echo '{}')
 CWD=$(echo "$INPUT" | jq -r '.cwd // "."')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "default"')
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""')
-TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input // "{}"')
-TOOL_OUTPUT=$(echo "$INPUT" | jq -r '.tool_output // ""')
+# Use compact JSON (-c) for nested objects to avoid newline issues
+TOOL_INPUT=$(echo "$INPUT" | jq -c '.tool_input // {}')
+TOOL_RESPONSE=$(echo "$INPUT" | jq -c '.tool_response // {}')
+# Extract success - default to true only if field is missing (not if false)
+TOOL_SUCCESS=$(echo "$INPUT" | jq 'if .tool_response.success == null then true else .tool_response.success end')
 
 cd "$CWD"
 
@@ -30,24 +33,26 @@ if command -v jwz &>/dev/null && [[ -n "$SESSION_ID" ]]; then
     # Create topic if it doesn't exist
     jwz topic new "$TRACE_TOPIC" 2>/dev/null || true
 
-    # Truncate tool_output if too large (>4KB)
-    TRUNCATED_OUTPUT="$TOOL_OUTPUT"
-    if [[ ${#TOOL_OUTPUT} -gt 4096 ]]; then
-        TRUNCATED_OUTPUT="${TOOL_OUTPUT:0:4000}... [truncated]"
+    # Truncate tool_response if too large (>4KB)
+    TRUNCATED_RESPONSE="$TOOL_RESPONSE"
+    if [[ ${#TOOL_RESPONSE} -gt 4096 ]]; then
+        TRUNCATED_RESPONSE="${TOOL_RESPONSE:0:4000}... [truncated]"
     fi
 
-    # Create trace event payload
+    # Create trace event payload with success indicator
     TRACE_EVENT=$(jq -n \
         --arg event_type "tool_completed" \
         --arg tool_name "$TOOL_NAME" \
         --arg tool_input "$TOOL_INPUT" \
-        --arg tool_output "$TRUNCATED_OUTPUT" \
+        --arg tool_response "$TRUNCATED_RESPONSE" \
+        --argjson success "$TOOL_SUCCESS" \
         --arg ts "$TIMESTAMP" \
         '{
             event_type: $event_type,
             tool_name: $tool_name,
             tool_input: $tool_input,
-            tool_output: $tool_output,
+            tool_response: $tool_response,
+            success: $success,
             timestamp: $ts
         }')
 
