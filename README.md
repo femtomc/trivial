@@ -132,17 +132,6 @@ When issues are found, alice creates tissue issues tagged `alice-review` and blo
 | Constitutional AI | [Bai et al., 2022](https://arxiv.org/abs/2212.08073) | Informs alice's structured critique approach |
 | Code review practices | [Sadowski et al., 2018](https://dl.acm.org/doi/10.1145/3183519.3183525) | Supports mandatory review before landing code |
 
-## Comparison to Other Tools
-
-| Tool | Approach | idle Difference |
-|------|----------|-----------------|
-| Devin | Autonomous sandbox execution | idle is a plugin for Claude Code, not a standalone agent |
-| SWE-Agent | Agent scaffolding for benchmarks | idle focuses on mandatory review gates |
-| Cursor/Copilot | Inline code suggestions | idle adds review before exit, not inline help |
-| Static analysis | Rule-based checks | idle uses an LLM reviewer for subjective issues |
-
-idle complements these tools by adding a review step before the agent exits.
-
 ## Dependencies
 
 | Dependency | Purpose | Required |
