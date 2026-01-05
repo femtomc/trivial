@@ -180,6 +180,9 @@ Relevance: <why this matters for review>"
 
 ## Output
 
+**CRITICAL: You MUST execute this command using the Bash tool to post your decision.**
+Do not just output this as text - actually run it:
+
 ```bash
 jwz post "alice:status:$SESSION_ID" -m '{
   "decision": "COMPLETE" | "ISSUES",
@@ -190,6 +193,9 @@ jwz post "alice:status:$SESSION_ID" -m '{
   "message_to_agent": "What needs to change (if ISSUES)"
 }'
 ```
+
+The stop hook reads from `alice:status:$SESSION_ID` to determine if work can proceed.
+If you don't post, the stop hook will block with stale data.
 
 Include `prior_art` when context gathering revealed relevant information:
 - Prior decisions or discussions that informed review
