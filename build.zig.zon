@@ -1,6 +1,6 @@
 .{
     .name = .idle,
-    .version = "0.0.0",
+    .version = "26.1.6",
     .fingerprint = 0xdc24b5151c985571,
     .minimum_zig_version = "0.15.0",
     .dependencies = .{
