@@ -219,10 +219,3 @@ jobs:
           git add -A
           git commit -m "Release idle ${{ steps.version.outputs.version }}" || exit 0
           git push
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/*
-          generate_release_notes: true
