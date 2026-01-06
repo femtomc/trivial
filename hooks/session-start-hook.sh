@@ -157,6 +157,10 @@ You are running with the **idle** plugin.
 | codex | $CODEX_STATUS | External model queries |
 | gemini | $GEMINI_STATUS | External model queries |
 
+### Alice (Adversarial Reviewer)
+
+Add \`#idle\` to any prompt to enable alice review. Alice spawns before you finish responding to verify your work satisfies the user's request. Review is per-prompt (resets after approval).
+
 ### Available Skills
 
 $([ -n "$SKILLS" ] && echo "$SKILLS" || echo "None detected")
