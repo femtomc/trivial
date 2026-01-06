@@ -16,7 +16,7 @@ This installs:
 - `jq` - JSON parsing (if needed)
 - The idle plugin (registered with Claude Code)
 
-Those other two binaries (`jwz` and `tissue`) are small Zig programs which allow Claude Code to store issues, messages, retain state (all in JSONL + SQLite, like `beads`) -- and are used by `idle` to track the state required to enforce the reviewer pattern (as well as giving Claude Code a place to store issues, research notes, etc). It's all kind of built in to the plugin, and my goal here is to make it easy to install these and get started (meaning: the goal is you shouldn't have to think about them!)
+Those other two binaries (`jwz` and `tissue`) are small Zig programs which allow Claude Code to store issues, messages, retain state (all in JSONL + SQLite, like `beads`) -- and are used by `idle` to track the state required to enforce the reviewer pattern (as well as giving Claude Code a place to store issues, research notes, etc). The plugin assumes these binaries are available and contains explicit instructions for how the agent should use them. The goal here is to make it easy to install these and get started (meaning: the goal is you shouldn't have to think about them!)
 
 ## Motivation
 
