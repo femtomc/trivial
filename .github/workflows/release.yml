@@ -252,7 +252,7 @@ jobs:
 
           # Update manifest with version and binary sizes
           cd site/releases
-          SIZES=$(cd ../idle/${VERSION} && for f in idle-*; do [ -f "$f" ] && echo "\"$f\": $(stat -c%s "$f" 2>/dev/null || stat -f%z "$f")"; done | paste -sd, -)
+          SIZES=$(cd idle/${VERSION} && for f in idle-*; do [ -f "$f" ] && echo "\"$f\": $(stat -c%s "$f" 2>/dev/null || stat -f%z "$f")"; done | paste -sd, -)
           if [ -f manifest.json ]; then
             jq --arg v "$VERSION" --argjson sizes "{$SIZES}" '.idle = {version: $v, sizes: $sizes}' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
           else
