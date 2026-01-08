@@ -15,6 +15,7 @@ INPUT=$(cat || echo '{}')
 
 CWD=$(echo "$INPUT" | jq -r '.cwd // "."')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "default"')
+SOURCE=$(echo "$INPUT" | jq -r '.source // "startup"')
 
 cd "$CWD"
 
@@ -128,10 +129,11 @@ fi
 trap 'echo "{\"hookSpecificOutput\": {\"hookEventName\": \"SessionStart\", \"additionalContext\": \"idle: hook error\"}}"; exit 0' ERR
 
 # --- Clean up stale review state from previous session ---
-# When a session starts (including resume), any previous review state is stale.
+# When a session truly starts (startup/resume/clear), any previous review state is stale.
 # The user must explicitly re-enable with #idle if they want review.
+# IMPORTANT: Skip cleanup on "compact" - compaction doesn't change session context.
 REVIEW_CLEANED=""
-if [[ "$JWZ_AVAILABLE" = "true" ]]; then
+if [[ "$JWZ_AVAILABLE" = "true" && "$SOURCE" != "compact" ]]; then
     REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
     # Check if review was previously enabled
@@ -202,7 +204,8 @@ if [[ "$JWZ_AVAILABLE" = "true" ]]; then
     TRACE_EVENT=$(jq -n \
         --arg event_type "session_start" \
         --arg ts "$TIMESTAMP" \
-        '{event_type: $event_type, timestamp: $ts}')
+        --arg src "$SOURCE" \
+        '{event_type: $event_type, timestamp: $ts, source: $src}')
 
     jwz post "$TRACE_TOPIC" -m "$TRACE_EVENT" >/dev/null 2>&1 || true
 fi
