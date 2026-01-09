@@ -68,7 +68,7 @@ Agent works → tries to exit → Stop hook → alice reviewed? → block/allow
 │                         Claude Code                            │
 │                                                                │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │                     alice plugin                          │  │
+│  │                     alice plugin                         │  │
 │  │                                                          │  │
 │  │   ┌─────────┐                                            │  │
 │  │   │  alice  │   Reviewer agent (Claude Opus)             │  │
