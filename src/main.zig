@@ -10,8 +10,9 @@
 
 const std = @import("std");
 const alice = @import("alice");
+const build_options = @import("build_options");
 
-const version = "0.0.0";
+const version = build_options.version;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

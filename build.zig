@@ -27,6 +27,11 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    // Build options (version parsed from build.zig.zon)
+    const options = b.addOptions();
+    const zon = @import("build.zig.zon");
+    options.addOption([]const u8, "version", zon.version);
+
     // Executable
     const exe = b.addExecutable(.{
         .name = "alice",
@@ -38,6 +43,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "alice", .module = mod },
                 .{ .name = "jwz", .module = jwz_mod },
                 .{ .name = "tissue", .module = tissue_mod },
+                .{ .name = "build_options", .module = options.createModule() },
             },
         }),
     });
