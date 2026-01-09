@@ -27,6 +27,10 @@ pub const HookInput = struct {
     tool_input: ?std.json.Value = null,
     tool_response: ?std.json.Value = null,
     source: ?[]const u8 = null, // For SessionStart: "startup", "resume", "clear", "compact"
+    // SubagentStop fields
+    subagent_type: ?[]const u8 = null,
+    subagent_prompt: ?[]const u8 = null,
+    subagent_response: ?[]const u8 = null,
 
     pub fn parse(allocator: std.mem.Allocator, json: []const u8) !std.json.Parsed(HookInput) {
         return std.json.parseFromSlice(HookInput, allocator, json, .{
@@ -190,28 +194,6 @@ fn ensureParentDir(path: []const u8) !void {
     std.fs.makeDirAbsolute(dir_path) catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
-}
-
-/// Check if a local store directory exists in cwd or ancestors
-fn hasLocalStore(store_name: []const u8) bool {
-    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const cwd_path = std.fs.cwd().realpath(".", &path_buf) catch return false;
-    var current: []const u8 = cwd_path;
-
-    while (true) {
-        // Check if store_name exists in current directory
-        var check_buf: [std.fs.max_path_bytes]u8 = undefined;
-        const candidate = std.fmt.bufPrint(&check_buf, "{s}/{s}", .{ current, store_name }) catch return false;
-        if (std.fs.accessAbsolute(candidate, .{})) |_| {
-            return true;
-        } else |_| {}
-
-        // Move to parent
-        const parent = std.fs.path.dirname(current) orelse break;
-        if (std.mem.eql(u8, parent, current)) break;
-        current = parent;
-    }
-    return false;
 }
 
 /// Open the jwz store, creating it if needed
@@ -706,6 +688,7 @@ fn escapeJsonString(s: []const u8, writer: anytype) !void {
 
 /// SessionStart hook - injects context and performs health checks
 pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
+    // Use standard store discovery - respects user's env vars and local stores
     const store_path = getAliceJwzStore(allocator) orelse {
         // Can't find any jwz store - continue without store features
         return HookOutput.approve();
@@ -713,107 +696,9 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
     defer allocator.free(store_path);
     const source = input.source orelse "startup";
 
-    // Get alice directory paths for fallback
-    const home = std.posix.getenv("HOME") orelse "/tmp";
-    var alice_dir_buf: [256]u8 = undefined;
-    const alice_dir = std.fmt.bufPrint(&alice_dir_buf, "{s}/.claude/alice", .{home}) catch "/tmp/.claude/alice";
-
-    // Discover tissue store (uses tissue's discovery: TISSUE_STORE env, then local walk)
-    // If no store found, create the global alice store as fallback
-    var tissue_path: []const u8 = undefined;
-    var tissue_needs_env_var = false;
-    var tissue_path_allocated = false;
-    // Buffer declared outside switch to avoid dangling pointer when tissue_path references it
-    var tissue_store_buf: [256]u8 = undefined;
-
-    if (tissue.store.discoverStoreDir(allocator)) |discovered_path| {
-        tissue_path = discovered_path;
-        tissue_path_allocated = true;
-        // Store was discovered - CLI will find it, no need to set env var
-    } else |err| switch (err) {
-        error.StoreNotFound => {
-            // No store found - create global alice store
-            tissue_path = std.fmt.bufPrint(&tissue_store_buf, "{s}/.tissue", .{alice_dir}) catch "/tmp/.tissue";
-            tissue_needs_env_var = true;
-
-            // Ensure alice directory exists
-            std.fs.cwd().makePath(alice_dir) catch {};
-
-            // Auto-initialize tissue store if not present
-            if (std.fs.accessAbsolute(tissue_path, .{})) |_| {
-                // Store exists
-            } else |_| {
-                if (std.process.Child.run(.{
-                    .allocator = allocator,
-                    .argv = &.{ "tissue", "--store", tissue_path, "init" },
-                    .max_output_bytes = 256,
-                })) |result| {
-                    allocator.free(result.stdout);
-                    allocator.free(result.stderr);
-                } else |_| {}
-            }
-        },
-        else => {
-            // Other error - use fallback path but don't set env var
-            tissue_path = std.fmt.bufPrint(&tissue_store_buf, "{s}/.tissue", .{alice_dir}) catch "/tmp/.tissue";
-        },
-    }
-    defer if (tissue_path_allocated) allocator.free(tissue_path);
-
-    // Persist env vars to CLAUDE_ENV_FILE for CLI command discovery
-    // Only write env vars when stores were created as fallback (not discovered locally)
-    if (std.posix.getenv("CLAUDE_ENV_FILE")) |env_file| {
-        // Read existing file content (if any)
-        var file_content: [4096]u8 = undefined;
-        var content_len: usize = 0;
-        if (std.fs.cwd().openFile(env_file, .{ .mode = .read_only })) |file| {
-            content_len = file.readAll(&file_content) catch 0;
-            file.close();
-        } else |_| {}
-        const existing_content = file_content[0..content_len];
-
-        // Only write TISSUE_STORE if we created the fallback store
-        const should_write_tissue = tissue_needs_env_var and
-            std.mem.indexOf(u8, existing_content, "TISSUE_STORE=") == null;
-
-        // For jwz: check if there's a local store (discovery checks local first)
-        // If no local store, write env var so CLI can find global store
-        const has_local_jwz = hasLocalStore(".jwz");
-        const should_write_jwz = !has_local_jwz and
-            std.mem.indexOf(u8, existing_content, "JWZ_STORE=") == null;
-
-        // Append to file if needed
-        if (should_write_tissue or should_write_jwz) {
-            var write_buf: [512]u8 = undefined;
-            if (std.fs.cwd().openFile(env_file, .{ .mode = .write_only })) |wfile| {
-                defer wfile.close();
-                wfile.seekFromEnd(0) catch {};
-                var writer = wfile.writer(&write_buf);
-                const w = &writer.interface;
-                if (should_write_tissue) {
-                    w.print("export TISSUE_STORE=\"{s}\"\n", .{tissue_path}) catch {};
-                }
-                if (should_write_jwz) {
-                    w.print("export JWZ_STORE=\"{s}\"\n", .{store_path}) catch {};
-                }
-                w.flush() catch {};
-            } else |_| {
-                // File doesn't exist, create it
-                if (std.fs.cwd().createFile(env_file, .{})) |wfile| {
-                    defer wfile.close();
-                    var writer = wfile.writer(&write_buf);
-                    const w = &writer.interface;
-                    if (should_write_tissue) {
-                        w.print("export TISSUE_STORE=\"{s}\"\n", .{tissue_path}) catch {};
-                    }
-                    if (should_write_jwz) {
-                        w.print("export JWZ_STORE=\"{s}\"\n", .{store_path}) catch {};
-                    }
-                    w.flush() catch {};
-                } else |_| {}
-            }
-        }
-    }
+    // Discover tissue store path (for health check display only)
+    const tissue_path = tissue.store.discoverStoreDir(allocator) catch null;
+    defer if (tissue_path) |p| allocator.free(p);
 
     // Try to open/create store
     var store = openOrCreateStore(allocator, store_path) catch |err| {
@@ -1233,6 +1118,122 @@ pub fn stop(allocator: std.mem.Allocator, input: HookInput) HookOutput {
     return buildBlockReason(allocator, input.session_id, alice_msg.id, null);
 }
 
+/// SubagentStop hook - validates alice:alice actually posted its decision
+pub fn subagentStop(allocator: std.mem.Allocator, input: HookInput) HookOutput {
+    // Only care about alice:alice subagent
+    const subagent_type = input.subagent_type orelse return HookOutput.approve();
+    if (!std.mem.eql(u8, subagent_type, "alice:alice")) {
+        return HookOutput.approve();
+    }
+
+    // Extract session ID from the subagent prompt
+    // Look for "SESSION_ID=xxx" pattern
+    const subagent_prompt = input.subagent_prompt orelse {
+        // No prompt means we can't validate - approve with warning
+        return HookOutput.approve();
+    };
+
+    const session_id = extractSessionId(subagent_prompt) orelse {
+        // Couldn't find SESSION_ID in prompt - this is a bug in the invoking agent
+        return HookOutput.block(
+            \\alice:alice completed but SESSION_ID was not found in the prompt.
+            \\
+            \\The invoking agent must include SESSION_ID=<session_id> in the alice prompt.
+            \\Re-invoke alice:alice with the correct format.
+        );
+    };
+
+    // Check if alice posted a decision to jwz
+    const store_path = getAliceJwzStore(allocator) orelse {
+        return HookOutput.approve(); // Fail open if no store
+    };
+    defer allocator.free(store_path);
+
+    var store = openOrCreateStore(allocator, store_path) catch {
+        return HookOutput.approve(); // Fail open on store error
+    };
+    defer store.deinit();
+
+    // Build topic name
+    var alice_topic_buf: [128]u8 = undefined;
+    const alice_topic = std.fmt.bufPrint(&alice_topic_buf, "alice:status:{s}", .{session_id}) catch {
+        return HookOutput.approve();
+    };
+
+    // Get the latest message
+    const alice_msg = getLatestMessage(allocator, &store, alice_topic) orelse {
+        // No message at all - alice didn't post
+        return buildAliceDidNotPostError(allocator, session_id);
+    };
+    defer alice_msg.deinit(allocator);
+
+    // Parse the message
+    const alice_status = std.json.parseFromSlice(AliceStatus, allocator, alice_msg.body, .{
+        .ignore_unknown_fields = true,
+    }) catch {
+        // Malformed message
+        return buildAliceDidNotPostError(allocator, session_id);
+    };
+    defer alice_status.deinit();
+
+    const decision = alice_status.value.decision orelse {
+        // No decision field
+        return buildAliceDidNotPostError(allocator, session_id);
+    };
+
+    // Check if it's a valid decision (not PENDING)
+    if (std.mem.eql(u8, decision, "PENDING")) {
+        return buildAliceDidNotPostError(allocator, session_id);
+    }
+
+    // Valid decision posted - approve
+    return HookOutput.approve();
+}
+
+fn extractSessionId(prompt: []const u8) ?[]const u8 {
+    // Look for "SESSION_ID=" pattern
+    const marker = "SESSION_ID=";
+    const start_idx = std.mem.indexOf(u8, prompt, marker) orelse return null;
+    const value_start = start_idx + marker.len;
+    if (value_start >= prompt.len) return null;
+
+    // Find the end (newline, space, or end of string)
+    var end_idx = value_start;
+    while (end_idx < prompt.len) : (end_idx += 1) {
+        const c = prompt[end_idx];
+        if (c == '\n' or c == '\r' or c == ' ' or c == '\t') break;
+    }
+
+    if (end_idx == value_start) return null;
+    return prompt[value_start..end_idx];
+}
+
+fn buildAliceDidNotPostError(allocator: std.mem.Allocator, session_id: []const u8) HookOutput {
+    var reason_list: std.ArrayList(u8) = .empty;
+
+    var writer = reason_list.writer(allocator);
+    writer.print(
+        \\alice:alice completed but did NOT post its decision to jwz.
+        \\
+        \\The alice agent must execute this command (not just output it as text):
+        \\
+        \\```bash
+        \\jwz post "alice:status:{s}" -m '{{
+        \\  "decision": "COMPLETE",
+        \\  "summary": "...",
+        \\  ...
+        \\}}'
+        \\```
+        \\
+        \\Re-invoke alice:alice. Ensure the agent actually runs the jwz post command.
+    , .{session_id}) catch {};
+
+    const reason = allocator.dupe(u8, reason_list.items) catch "alice did not post decision";
+    reason_list.deinit(allocator);
+
+    return HookOutput.block(reason);
+}
+
 /// Trip the circuit breaker and disable review
 fn tripCircuitBreaker(
     allocator: std.mem.Allocator,
@@ -1394,6 +1395,8 @@ pub fn runHook(base_allocator: std.mem.Allocator, hook_name: []const u8) !void {
         postToolUse(allocator, input)
     else if (std.mem.eql(u8, hook_name, "stop"))
         stop(allocator, input)
+    else if (std.mem.eql(u8, hook_name, "subagent-stop"))
+        subagentStop(allocator, input)
     else {
         try stdout.print("{{\"decision\":\"approve\",\"reason\":\"Unknown hook: {s}\"}}", .{hook_name});
         try stdout.flush();
@@ -1437,4 +1440,29 @@ test "json string escaping" {
     stream.reset();
     try escapeJsonString("quote\"here", stream.writer());
     try testing.expectEqualStrings("quote\\\"here", stream.getWritten());
+}
+
+test "extractSessionId" {
+    const testing = std.testing;
+
+    // Basic case
+    try testing.expectEqualStrings("abc123", extractSessionId("SESSION_ID=abc123").?);
+
+    // With newline
+    try testing.expectEqualStrings("abc123", extractSessionId("SESSION_ID=abc123\nMore text").?);
+
+    // With other content before
+    try testing.expectEqualStrings("xyz789", extractSessionId("Some intro\nSESSION_ID=xyz789\nMore").?);
+
+    // UUID-style session ID
+    try testing.expectEqualStrings(
+        "03374894-467b-404f-bfa4-ed8a0388ba4e",
+        extractSessionId("SESSION_ID=03374894-467b-404f-bfa4-ed8a0388ba4e\n").?,
+    );
+
+    // No session ID
+    try testing.expectEqual(@as(?[]const u8, null), extractSessionId("No session here"));
+
+    // Empty value
+    try testing.expectEqual(@as(?[]const u8, null), extractSessionId("SESSION_ID=\n"));
 }
