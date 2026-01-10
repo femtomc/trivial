@@ -376,7 +376,34 @@ pub fn sessionEnd(allocator: std.mem.Allocator, input: HookInput) HookOutput {
     return HookOutput.approve();
 }
 
-/// Truncate and serialize a JSON value to a string (max 4KB like bash script)
+/// Find the last valid UTF-8 boundary at or before `max_len`.
+/// UTF-8 encoding: bytes starting with 10xxxxxx are continuation bytes.
+/// We walk back from max_len to find a byte that's not a continuation.
+fn findUtf8Boundary(data: []const u8, max_len: usize) usize {
+    if (data.len <= max_len) return data.len;
+
+    var end = max_len;
+    // Walk back while we're on continuation bytes (0x80-0xBF)
+    while (end > 0 and (data[end] & 0xC0) == 0x80) {
+        end -= 1;
+    }
+    // If we're now on a multi-byte start (0xC0-0xFF), check if the sequence is complete
+    if (end > 0 and (data[end - 1] & 0x80) != 0) {
+        // Check if the byte at end-1 starts a sequence that would extend past end
+        const start_byte = data[end - 1];
+        const seq_len: usize = if ((start_byte & 0xF8) == 0xF0) 4 // 11110xxx = 4 bytes
+        else if ((start_byte & 0xF0) == 0xE0) 3 // 1110xxxx = 3 bytes
+        else if ((start_byte & 0xE0) == 0xC0) 2 // 110xxxxx = 2 bytes
+        else 1;
+        // If sequence would be incomplete, exclude it
+        if (end - 1 + seq_len > max_len) {
+            end -= 1;
+        }
+    }
+    return end;
+}
+
+/// Truncate and serialize a JSON value to a string, respecting UTF-8 boundaries.
 fn truncateJsonValue(allocator: std.mem.Allocator, value: ?std.json.Value, max_len: usize) []const u8 {
     const val = value orelse return "";
 
@@ -388,11 +415,9 @@ fn truncateJsonValue(allocator: std.mem.Allocator, value: ?std.json.Value, max_l
 
     if (json_list.items.len == 0) return "";
 
-    // Truncate if needed
-    const truncated = if (json_list.items.len > max_len)
-        json_list.items[0..max_len]
-    else
-        json_list.items;
+    // Truncate at UTF-8 boundary if needed
+    const safe_len = findUtf8Boundary(json_list.items, max_len);
+    const truncated = json_list.items[0..safe_len];
 
     // Duplicate since we're returning from deferred data
     return allocator.dupe(u8, truncated) catch "";
@@ -470,8 +495,8 @@ pub fn postToolUse(allocator: std.mem.Allocator, input: HookInput) HookOutput {
         }
     }
 
-    // Truncate tool payloads (4KB max like bash script)
-    const max_payload_size: usize = 4096;
+    // Truncate tool payloads (8KB max, UTF-8-safe)
+    const max_payload_size: usize = 8192;
     const tool_input_str = truncateJsonValue(allocator, input.tool_input, max_payload_size);
     defer if (tool_input_str.len > 0) allocator.free(tool_input_str);
     const tool_response_str = truncateJsonValue(allocator, input.tool_response, max_payload_size);
@@ -1473,4 +1498,34 @@ test "extractSessionId" {
 
     // Empty value
     try testing.expectEqual(@as(?[]const u8, null), extractSessionId("SESSION_ID=\n"));
+}
+
+test "findUtf8Boundary" {
+    const testing = std.testing;
+
+    // ASCII-only: boundary is exact
+    try testing.expectEqual(@as(usize, 5), findUtf8Boundary("hello world", 5));
+
+    // Under max_len: return full length
+    try testing.expectEqual(@as(usize, 5), findUtf8Boundary("hello", 10));
+
+    // 2-byte UTF-8 (e.g., "é" = C3 A9): don't cut in middle
+    const e_acute = "caf\xc3\xa9"; // "café"
+    try testing.expectEqual(@as(usize, 3), findUtf8Boundary(e_acute, 4)); // Before the é
+    try testing.expectEqual(@as(usize, 5), findUtf8Boundary(e_acute, 5)); // Include full é
+
+    // 3-byte UTF-8 (e.g., "─" = E2 94 80): don't cut in middle
+    const box_char = "a\xe2\x94\x80b"; // "a─b"
+    try testing.expectEqual(@as(usize, 1), findUtf8Boundary(box_char, 2)); // Before box char
+    try testing.expectEqual(@as(usize, 1), findUtf8Boundary(box_char, 3)); // Still before (incomplete)
+    try testing.expectEqual(@as(usize, 4), findUtf8Boundary(box_char, 4)); // Include full box char
+
+    // 4-byte UTF-8 (e.g., emoji "😀" = F0 9F 98 80)
+    const emoji = "x\xf0\x9f\x98\x80y"; // "x😀y"
+    try testing.expectEqual(@as(usize, 1), findUtf8Boundary(emoji, 2)); // Before emoji
+    try testing.expectEqual(@as(usize, 1), findUtf8Boundary(emoji, 4)); // Still before (incomplete)
+    try testing.expectEqual(@as(usize, 5), findUtf8Boundary(emoji, 5)); // Include full emoji
+
+    // Empty string
+    try testing.expectEqual(@as(usize, 0), findUtf8Boundary("", 10));
 }
