@@ -82,6 +82,11 @@ You are also fallible. Actively seek disconfirmation:
 
 You have blind spots. Different models reason differently. Use this:
 
+**CRITICAL: You MUST wait for codex/gemini to complete before posting your decision.**
+- Do NOT use `run_in_background: true` for these commands
+- Do NOT post to jwz until you have received and incorporated their responses
+- If a command times out, retry or note the failure in your decision
+
 ```bash
 # Use reasoning=high for most reviews (30-90 sec)
 # Escalate to reasoning=xhigh only for security, correctness proofs, or complex reasoning (2-5 min)
@@ -179,8 +184,11 @@ jwz commands.
 3. **External research**: Use researching skill for similar systems if warranted
 4. **Study the work**: Read changes, trace logic, understand intent
 5. **Reason exhaustively**: Apply deep reasoning strategies above
-6. **Seek second opinion**: Validate with Codex/Gemini
+6. **Seek second opinion**: Validate with Codex/Gemini (WAIT for responses)
 7. **Decide**: COMPLETE or ISSUES
+
+**Step 6 MUST complete before step 7.** Do not post your decision until you have received
+and incorporated responses from external models.
 
 ## Output
 

@@ -173,6 +173,7 @@ pub const AliceStatus = struct {
     decision: ?[]const u8 = null,
     summary: ?[]const u8 = null,
     message_to_agent: ?[]const u8 = null,
+    second_opinions: ?[]const u8 = null,
     timestamp: ?[]const u8 = null,
 };
 
@@ -1219,7 +1220,22 @@ pub fn subagentStop(allocator: std.mem.Allocator, input: HookInput) HookOutput {
         return buildAliceDidNotPostError(allocator, session_id);
     }
 
-    // Valid decision posted - approve
+    // Soft check: warn if second_opinions is missing (alice may not have waited for codex/gemini)
+    const has_second_opinions = if (alice_status.value.second_opinions) |so|
+        so.len > 0
+    else
+        false;
+
+    if (!has_second_opinions) {
+        return emitWarningAndApprove(
+            allocator,
+            &store,
+            session_id,
+            "alice decision missing 'second_opinions' - external validation may have been skipped",
+        );
+    }
+
+    // Valid decision posted with second opinions - approve
     return HookOutput.approve();
 }
 
